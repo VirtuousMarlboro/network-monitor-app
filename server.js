@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -121,7 +121,7 @@ app.use((req, res, next) => {
 // ========================================
 const SESSION_SECRET = process.env.SESSION_SECRET;
 if (!SESSION_SECRET || SESSION_SECRET.length < 32 || SESSION_SECRET.includes('change_me') || SESSION_SECRET.includes('fallback')) {
-    console.error('❌ FATAL: SESSION_SECRET must be set and at least 32 characters!');
+    console.error('âŒ FATAL: SESSION_SECRET must be set and at least 32 characters!');
     console.error('   Generate one with: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"');
     process.exit(1);
 }
@@ -155,7 +155,7 @@ if (fs.existsSync(VAPID_KEYS_FILE)) {
     // Generate new VAPID keys
     vapidKeys = webpush.generateVAPIDKeys();
     fs.writeFileSync(VAPID_KEYS_FILE, JSON.stringify(vapidKeys, null, 2));
-    console.log('📱 Generated new VAPID keys for push notifications');
+    console.log('ðŸ“± Generated new VAPID keys for push notifications');
 }
 
 // Configure web-push with VAPID keys
@@ -177,7 +177,7 @@ if (process.env.NODE_ENV === 'production') {
         }
         next();
     });
-    console.log('🔒 HTTPS redirect enabled for production');
+    console.log('ðŸ”’ HTTPS redirect enabled for production');
 }
 
 // Security Middleware with Hardened CSP
@@ -282,14 +282,14 @@ app.use(express.json());
 
 // Web Application Firewall (WAF) - Must be after express.json() to access req.body
 app.use(wafMiddleware);
-console.log('🛡️ WAF (Web Application Firewall) enabled');
+console.log('ðŸ›¡ï¸ WAF (Web Application Firewall) enabled');
 app.use(express.static('public'));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 // SECURITY: Persistent SQLite Session Store
 const SESSION_DB_PATH = path.join(DATA_DIR, 'sessions.db');
 const sessionDb = new Database(SESSION_DB_PATH);
-console.log('💾 Session store: SQLite (persistent)');
+console.log('ðŸ’¾ Session store: SQLite (persistent)');
 
 app.use(session({
     name: 'nms.sid', // Custom session name (hide express)
@@ -382,21 +382,21 @@ function loadData() {
         if (fs.existsSync(HOSTS_FILE)) {
             const hostsData = fs.readFileSync(HOSTS_FILE, 'utf-8');
             monitoredHosts = JSON.parse(hostsData);
-            console.log(`📂 Loaded ${monitoredHosts.length} hosts from file`);
+            console.log(`ðŸ“‚ Loaded ${monitoredHosts.length} hosts from file`);
         }
 
         // Load logs
         if (fs.existsSync(LOGS_FILE)) {
             const logsData = fs.readFileSync(LOGS_FILE, 'utf-8');
             statusLogs = JSON.parse(logsData);
-            console.log(`📂 Loaded ${statusLogs.length} logs from file`);
+            console.log(`ðŸ“‚ Loaded ${statusLogs.length} logs from file`);
         }
 
         // Load users
         if (fs.existsSync(USERS_FILE)) {
             const usersData = fs.readFileSync(USERS_FILE, 'utf-8');
             users = JSON.parse(usersData);
-            console.log(`📂 Loaded ${users.length} users from file`);
+            console.log(`ðŸ“‚ Loaded ${users.length} users from file`);
         } else {
             // Create default admin if no users file exists
             createDefaultAdmin();
@@ -408,7 +408,7 @@ function loadData() {
             const parsed = JSON.parse(ticketsData);
             tickets = parsed.tickets || [];
             ticketCounters = parsed.counters || { auto: 0, manual: 0 };
-            console.log(`📂 Loaded ${tickets.length} tickets from file`);
+            console.log(`ðŸ“‚ Loaded ${tickets.length} tickets from file`);
         }
 
         // Load settings
@@ -418,49 +418,49 @@ function loadData() {
             if (settings.telegram) {
                 telegramConfig = settings.telegram;
             }
-            console.log('📂 Loaded settings from file');
+            console.log('ðŸ“‚ Loaded settings from file');
         }
 
         // Load host groups
         if (fs.existsSync(HOST_GROUPS_FILE)) {
             const groupsData = fs.readFileSync(HOST_GROUPS_FILE, 'utf-8');
             hostGroups = JSON.parse(groupsData);
-            console.log(`📂 Loaded ${hostGroups.length} host groups from file`);
+            console.log(`ðŸ“‚ Loaded ${hostGroups.length} host groups from file`);
         }
 
         // Load audit logs
         if (fs.existsSync(AUDIT_LOGS_FILE)) {
             const auditData = fs.readFileSync(AUDIT_LOGS_FILE, 'utf-8');
             auditLogs = JSON.parse(auditData);
-            console.log(`📂 Loaded ${auditLogs.length} audit logs from file`);
+            console.log(`ðŸ“‚ Loaded ${auditLogs.length} audit logs from file`);
         }
 
         // Load maintenance windows (Phase 2)
         if (fs.existsSync(MAINTENANCE_FILE)) {
             const maintenanceData = fs.readFileSync(MAINTENANCE_FILE, 'utf-8');
             maintenanceWindows = JSON.parse(maintenanceData);
-            console.log(`📂 Loaded ${maintenanceWindows.length} maintenance windows from file`);
+            console.log(`ðŸ“‚ Loaded ${maintenanceWindows.length} maintenance windows from file`);
         }
 
         // Load push subscriptions (Phase 3)
         if (fs.existsSync(PUSH_SUBSCRIPTIONS_FILE)) {
             const pushData = fs.readFileSync(PUSH_SUBSCRIPTIONS_FILE, 'utf-8');
             pushSubscriptions = JSON.parse(pushData);
-            console.log(`📂 Loaded ${pushSubscriptions.length} push subscriptions from file`);
+            console.log(`ðŸ“‚ Loaded ${pushSubscriptions.length} push subscriptions from file`);
         }
 
         // Load API keys (Phase 3)
         if (fs.existsSync(API_KEYS_FILE)) {
             const apiKeysData = fs.readFileSync(API_KEYS_FILE, 'utf-8');
             apiKeys = JSON.parse(apiKeysData);
-            console.log(`📂 Loaded ${apiKeys.length} API keys from file`);
+            console.log(`ðŸ“‚ Loaded ${apiKeys.length} API keys from file`);
         }
 
         // Load webhooks (Phase 3)
         if (fs.existsSync(WEBHOOKS_FILE)) {
             const webhooksData = fs.readFileSync(WEBHOOKS_FILE, 'utf-8');
             webhooks = JSON.parse(webhooksData);
-            console.log(`📂 Loaded ${webhooks.length} webhooks from file`);
+            console.log(`ðŸ“‚ Loaded ${webhooks.length} webhooks from file`);
         }
 
         // SNMP traffic now stored in SQLite - no need to load from JSON
@@ -582,7 +582,7 @@ function savePushSubscriptions() {
  */
 async function sendPushNotificationToAll(payload) {
     if (pushSubscriptions.length === 0) {
-        console.log('📱 No push subscribers');
+        console.log('ðŸ“± No push subscribers');
         return;
     }
 
@@ -612,7 +612,7 @@ async function sendPushNotificationToAll(payload) {
             if (error.statusCode === 404 || error.statusCode === 410) {
                 // Subscription expired or invalid
                 expiredSubscriptions.push(subscription.endpoint);
-                console.log('📱 Removing expired push subscription');
+                console.log('ðŸ“± Removing expired push subscription');
             } else {
                 console.error('Push notification error:', error.message);
             }
@@ -627,7 +627,7 @@ async function sendPushNotificationToAll(payload) {
         savePushSubscriptions();
     }
 
-    console.log(`📱 Push notifications sent to ${pushSubscriptions.length} subscribers`);
+    console.log(`ðŸ“± Push notifications sent to ${pushSubscriptions.length} subscribers`);
 }
 
 // Phase 3: API Key Functions
@@ -694,7 +694,7 @@ async function sendWebhookEvent(eventType, payload) {
     const activeWebhooks = webhooks.filter(w => w.enabled && w.events.includes(eventType));
 
     if (activeWebhooks.length === 0) {
-        console.log(`🔗 No webhooks configured for event: ${eventType}`);
+        console.log(`ðŸ”— No webhooks configured for event: ${eventType}`);
         return;
     }
 
@@ -724,14 +724,14 @@ async function sendWebhookEvent(eventType, payload) {
             });
 
             if (response.ok) {
-                console.log(`🔗 Webhook sent successfully to ${webhook.name}: ${eventType}`);
+                console.log(`ðŸ”— Webhook sent successfully to ${webhook.name}: ${eventType}`);
                 webhook.lastDelivery = { success: true, timestamp: new Date().toISOString() };
             } else {
-                console.error(`🔗 Webhook failed for ${webhook.name}: ${response.status}`);
+                console.error(`ðŸ”— Webhook failed for ${webhook.name}: ${response.status}`);
                 webhook.lastDelivery = { success: false, timestamp: new Date().toISOString(), error: `HTTP ${response.status}` };
             }
         } catch (error) {
-            console.error(`🔗 Webhook error for ${webhook.name}:`, error.message);
+            console.error(`ðŸ”— Webhook error for ${webhook.name}:`, error.message);
             webhook.lastDelivery = { success: false, timestamp: new Date().toISOString(), error: error.message };
         }
     }
@@ -766,7 +766,7 @@ function addAuditLog(userId, username, action, details, metadata = {}) {
     }
 
     saveAuditLogs();
-    console.log(`📝 Audit: [${action}] ${username} - ${details}`);
+    console.log(`ðŸ“ Audit: [${action}] ${username} - ${details}`);
 }
 
 function generateTicketId(source, incidentDate = null) {
@@ -830,7 +830,7 @@ function createDefaultAdmin() {
         mustChangePassword: true // Force admin to change password on first login
     }];
     saveUsers();
-    console.log(`⚠️ Created default admin user (ID: ${adminId}) - MUST CHANGE PASSWORD ON FIRST LOGIN`);
+    console.log(`âš ï¸ Created default admin user (ID: ${adminId}) - MUST CHANGE PASSWORD ON FIRST LOGIN`);
 }
 
 // ========================================
@@ -1063,14 +1063,14 @@ const telegramService = {
         if (!isDuplicate) {
             // Limit queue size to prevent memory issues during outages
             if (this.queue.length >= 50) {
-                console.warn('⚠️ Telegram queue full (50), dropping oldest message');
+                console.warn('âš ï¸ Telegram queue full (50), dropping oldest message');
                 this.queue.shift(); // Remove oldest
             }
             this.queue.push({ message, retries: 0, addedAt: Date.now() });
-            console.log(`📬 Telegram queue: ${this.queue.length} message(s) pending`);
+            console.log(`ðŸ“¬ Telegram queue: ${this.queue.length} message(s) pending`);
             this.processQueue();
         } else {
-            console.log('📬 Duplicate message skipped');
+            console.log('ðŸ“¬ Duplicate message skipped');
         }
     },
 
@@ -1082,7 +1082,7 @@ const telegramService = {
         // Check rate limit before processing
         if (!this.canSendMessage()) {
             const waitTime = this.getWaitTime();
-            console.log(`⏳ Rate limit: waiting ${Math.round(waitTime / 1000)}s before sending (${this.messageTimestamps.length}/${this.maxMessagesPerMinute} in last minute)`);
+            console.log(`â³ Rate limit: waiting ${Math.round(waitTime / 1000)}s before sending (${this.messageTimestamps.length}/${this.maxMessagesPerMinute} in last minute)`);
 
             setTimeout(() => {
                 this.isProcessing = false;
@@ -1095,7 +1095,7 @@ const telegramService = {
 
         // Skip stale messages (older than 5 minutes)
         if (Date.now() - currentItem.addedAt > 300000) {
-            console.warn('⚠️ Dropping stale message (>5 min old)');
+            console.warn('âš ï¸ Dropping stale message (>5 min old)');
             this.queue.shift();
             this.isProcessing = false;
             this.processQueue();
@@ -1110,7 +1110,7 @@ const telegramService = {
             this.queue.shift();
 
             if (this.queue.length > 0) {
-                console.log(`📬 Telegram queue: ${this.queue.length} message(s) remaining`);
+                console.log(`ðŸ“¬ Telegram queue: ${this.queue.length} message(s) remaining`);
             }
 
             // Wait before next message
@@ -1125,7 +1125,7 @@ const telegramService = {
             if (error.status === 429) {
                 // Rate limited by Telegram - Use their retry_after value, NO retry increment
                 const retryAfter = (error.retryAfter || 60) * 1000;
-                console.warn(`⚠️ Telegram Rate Limit (429)! Pausing for ${retryAfter / 1000}s`);
+                console.warn(`âš ï¸ Telegram Rate Limit (429)! Pausing for ${retryAfter / 1000}s`);
 
                 setTimeout(() => {
                     this.isProcessing = false;
@@ -1137,7 +1137,7 @@ const telegramService = {
                 currentItem.retries++;
 
                 if (currentItem.retries >= this.maxRetries) {
-                    console.error(`❌ Max retries (${this.maxRetries}) reached, dropping notification`);
+                    console.error(`âŒ Max retries (${this.maxRetries}) reached, dropping notification`);
                     this.queue.shift(); // Drop it immediately
                     this.isProcessing = false;
 
@@ -1147,7 +1147,7 @@ const telegramService = {
                     }, 1000);
                 } else {
                     // Simple fixed delay retry (no exponential to avoid long waits)
-                    console.warn(`🔄 Retry ${currentItem.retries}/${this.maxRetries} in ${this.baseDelay / 1000}s`);
+                    console.warn(`ðŸ”„ Retry ${currentItem.retries}/${this.maxRetries} in ${this.baseDelay / 1000}s`);
 
                     setTimeout(() => {
                         this.isProcessing = false;
@@ -1186,7 +1186,7 @@ const telegramService = {
 
                 res.on('end', () => {
                     if (res.statusCode === 200) {
-                        console.log('✅ Telegram notification sent');
+                        console.log('âœ… Telegram notification sent');
                         resolve();
                     } else {
                         const error = new Error(`Telegram API: ${res.statusCode}`);
@@ -1258,7 +1258,7 @@ function startAutoPing() {
     };
 
     runPingLoop();
-    console.log(`🔄 Auto-ping started (every ${PROBE_INTERVAL / 1000} seconds, ${PROBE_DOWN_COUNT} failures to mark offline)`);
+    console.log(`ðŸ”„ Auto-ping started (every ${PROBE_INTERVAL / 1000} seconds, ${PROBE_DOWN_COUNT} failures to mark offline)`);
 }
 
 // Stop auto ping
@@ -1267,7 +1267,7 @@ function stopAutoPing() {
         clearTimeout(autoPingInterval); // Change clearInterval to clearTimeout
         autoPingInterval = null;
     }
-    console.log('⏹️ Auto-ping stopped');
+    console.log('â¹ï¸ Auto-ping stopped');
 }
 
 // Send SSE event to all connected clients
@@ -1277,235 +1277,6 @@ function broadcastSSE(event, data) {
         client.write(message);
     });
 }
-
-// ========================================
-// Auth Routes - DEPRECATED: Moved to routes/authRoutes.js and routes/userRoutes.js
-// ========================================
-/*
-/* START DEPRECATED AUTH/USER ROUTES - Preserved for reference
-
-app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
-    const user = users.find(u => u.username === username);
-    if (!user || !bcrypt.compareSync(password, user.password)) {
-        return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    // SECURITY: Store both userId and userRole in session
-    req.session.userId = user.id;
-    req.session.userRole = user.role;
-
-    // Check if user needs to change password:
-    // 1. Flag is explicitly set, OR
-    // 2. Their current password doesn't meet strength requirements (for legacy users)
-    let mustChangePassword = user.mustChangePassword === true;
-
-    // For existing users without strong passwords, force them to change
-    // We can't check the plaintext password, but we know if the flag isn't set
-    // and they haven't changed their password yet, use explicit flag OR admin sets it
-    // Since we now have the plaintext password during login, we can VALIDATE it directly.
-
-    // Auto-flag if property missing
-    if (user.mustChangePassword === undefined) {
-        user.mustChangePassword = true;
-        mustChangePassword = true;
-        saveUsers();
-    }
-    // Re-evaluate password strength on every login
-    // If password is weak (policy changed?), force update
-    else if (!isStrongPassword(password) && !mustChangePassword) {
-        user.mustChangePassword = true;
-        mustChangePassword = true;
-        saveUsers();
-    }
-
-    // Audit log for login
-    addAuditLog(user.id, user.username, 'login', `User logged in`, { ip: req.ip });
-
-    res.json({
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        name: user.name,
-        mustChangePassword
-    });
-});
-
-app.post('/api/logout', (req, res) => {
-    // Audit log before session destroy
-    if (req.session && req.session.userId) {
-        const user = users.find(u => u.id === req.session.userId);
-        addAuditLog(req.session.userId, user?.username || 'unknown', 'logout', 'User logged out', { ip: req.ip });
-    }
-    req.session.destroy();
-    res.json({ message: 'Logged out' });
-});
-
-app.get('/api/me', (req, res) => {
-    if (!req.session || !req.session.userId) {
-        return res.status(401).json({ error: 'Not authenticated' });
-    }
-    const user = users.find(u => u.id === req.session.userId);
-    if (!user) return res.status(401).json({ error: 'User not found' });
-    res.json({
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        name: user.name,
-        mustChangePassword: user.mustChangePassword === true
-    });
-});
-
-// API: Change Password (for forced change or voluntary change)
-app.put('/api/change-password', requireAuth, (req, res) => {
-    const { newPassword, confirmPassword } = req.body;
-    const userId = req.session.userId;
-
-    const user = users.find(u => u.id === userId);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    if (!newPassword || !confirmPassword) {
-        return res.status(400).json({ error: 'Password baru dan konfirmasi wajib diisi' });
-    }
-
-    if (newPassword !== confirmPassword) {
-        return res.status(400).json({ error: 'Password baru dan konfirmasi tidak sama' });
-    }
-
-    if (!isStrongPassword(newPassword)) {
-        return res.status(400).json({ error: getPasswordStrengthError() });
-    }
-
-    // Update password and clear the flag
-    const salt = bcrypt.genSaltSync(10);
-    user.password = bcrypt.hashSync(newPassword, salt);
-    user.mustChangePassword = false;
-
-    saveUsers();
-    res.json({ message: 'Password berhasil diubah' });
-});
-
-// ========================================
-// User Management Routes (Admin Only)
-// ========================================
-
-app.get('/api/users', requireAdmin, (req, res) => {
-    // Return users without password hash
-    const safeUsers = users.map(u => ({ id: u.id, username: u.username, role: u.role, name: u.name }));
-    res.json(safeUsers);
-});
-
-// API: Get users list for PIC selection (accessible by all authenticated users)
-app.get('/api/users/list', requireAuth, (req, res) => {
-    // Return minimal user info for PIC dropdown
-    const safeUsers = users.map(u => ({ id: u.id, name: u.name || u.username, username: u.username }));
-    res.json(safeUsers);
-});
-
-app.post('/api/users', requireAdmin, (req, res) => {
-    const { username, password, role, name } = req.body;
-    if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
-
-    // Admin can use any password (for easy credential handoff)
-    // User will be forced to change it on first login
-
-    if (users.find(u => u.username === username)) {
-        return res.status(400).json({ error: 'Username already exists' });
-    }
-
-    const salt = bcrypt.genSaltSync(10);
-    const hash = bcrypt.hashSync(password, salt);
-    const newUser = {
-        id: Date.now().toString(),
-        username,
-        password: hash,
-        role: role || 'user',
-        name: name || username,
-        mustChangePassword: true // Force password change on first login
-    };
-    users.push(newUser);
-    saveUsers();
-    res.json({ id: newUser.id, username: newUser.username, role: newUser.role, name: newUser.name });
-});
-
-app.delete('/api/users/:id', requireAdmin, (req, res) => {
-    const { id } = req.params;
-
-    // SECURITY: Protect superadmin by username (ID is now random UUID)
-    const userToDelete = users.find(u => u.id === id);
-    if (userToDelete && userToDelete.username === 'admin') {
-        return res.status(403).json({ error: 'Cannot delete superadmin' });
-    }
-
-    const initialLength = users.length;
-    users = users.filter(u => u.id !== id);
-    if (users.length === initialLength) return res.status(404).json({ error: 'User not found' });
-
-    saveUsers();
-    res.json({ message: 'User deleted' });
-});
-
-app.put('/api/users/:id', requireAdmin, (req, res) => {
-    const { id } = req.params;
-    const { username, password, role, name } = req.body;
-
-    const user = users.find(u => u.id === id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    // Validate unique username if changed
-    if (username && username !== user.username) {
-        if (users.find(u => u.username === username)) {
-            return res.status(400).json({ error: 'Username already exists' });
-        }
-        user.username = username;
-    }
-
-    if (name) user.name = name;
-    if (role) user.role = role;
-
-    // Only update password if provided
-    if (password && password.trim() !== '') {
-        const salt = bcrypt.genSaltSync(10);
-        user.password = bcrypt.hashSync(password, salt);
-    }
-
-    saveUsers();
-    res.json({ id: user.id, username: user.username, role: user.role, name: user.name });
-});
-
-// API: Update own profile (for normal users)
-app.put('/api/profile', requireAuth, (req, res) => {
-    const { username, password, name } = req.body;
-    const userId = req.session.userId;
-
-    const user = users.find(u => u.id === userId);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    // Validate unique username if changed
-    if (username && username !== user.username) {
-        if (users.find(u => u.username === username)) {
-            return res.status(400).json({ error: 'Username already exists' });
-        }
-        user.username = username;
-    }
-
-    if (name) user.name = name;
-
-    // Only update password if provided
-    // Only update password if provided
-    if (password && password.trim() !== '') {
-        if (!isStrongPassword(password)) {
-            return res.status(400).json({ error: getPasswordStrengthError() });
-        }
-        const salt = bcrypt.genSaltSync(10);
-        user.password = bcrypt.hashSync(password, salt);
-    }
-
-    saveUsers();
-    res.json({ id: user.id, username: user.username, role: user.role, name: user.name });
-});
-
-END DEPRECATED AUTH/USER ROUTES */
 
 // Process SNMP Traffic Data - Now uses SQLite via databaseService
 function processTrafficData(hostId, data) {
@@ -1648,17 +1419,17 @@ async function autoPingAllHosts() {
             // Track when host first went down
             hostDownSince[hostData.id] = Date.now();
             hostTicketCreated[hostData.id] = false;
-            console.log(`⏱️ Host ${hostData.name} went down, waiting 2 minutes before creating ticket...`);
+            console.log(`â±ï¸ Host ${hostData.name} went down, waiting 2 minutes before creating ticket...`);
 
             // Send Telegram Notification immediately (unless in maintenance)
             const maintenanceDown = isHostInMaintenance(hostData.id);
             if (maintenanceDown) {
-                console.log(`🔧 Host ${hostData.name} is in maintenance - suppressing down notification`);
+                console.log(`ðŸ”§ Host ${hostData.name} is in maintenance - suppressing down notification`);
             } else {
-                await sendTelegramNotification(`🔴 Host Offline\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nTime: ${new Date(result.timestamp).toLocaleString()}`);
+                await sendTelegramNotification(`ðŸ”´ Host Offline\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nTime: ${new Date(result.timestamp).toLocaleString()}`);
                 // Also send push notification with unique tag
                 await sendPushNotificationToAll({
-                    title: '🔴 Host Offline',
+                    title: 'ðŸ”´ Host Offline',
                     body: `${hostData.name} (${hostData.host}) is down`,
                     tag: `host-down-${hostData.id}-${Date.now()}`
                 });
@@ -1688,11 +1459,11 @@ async function autoPingAllHosts() {
                 // Check maintenance status before creating ticket
                 const maintenanceTicket = isHostInMaintenance(hostData.id);
                 if (maintenanceTicket) {
-                    console.log(`🔧 Host ${hostData.name} is in maintenance - skipping auto-ticket creation`);
+                    console.log(`ðŸ”§ Host ${hostData.name} is in maintenance - skipping auto-ticket creation`);
                     hostTicketCreated[hostData.id] = true; // Mark as "handled" to avoid repeated checks
                 } else {
                     // Host has been down for 2 minutes, create ticket now
-                    console.log(`🎫 Host ${hostData.name} still down after 2 minutes - creating ticket`);
+                    console.log(`ðŸŽ« Host ${hostData.name} still down after 2 minutes - creating ticket`);
                     createTicket(
                         hostData.id,
                         hostData.name,
@@ -1705,7 +1476,7 @@ async function autoPingAllHosts() {
                     hostTicketCreated[hostData.id] = true;
 
                     // Send additional Telegram notification about ticket creation
-                    await sendTelegramNotification(`🎫 Tiket Otomatis Dibuat\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nAlasan: Host down lebih dari 2 menit`);
+                    await sendTelegramNotification(`ðŸŽ« Tiket Otomatis Dibuat\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nAlasan: Host down lebih dari 2 menit`);
                 }
             }
         }
@@ -1730,18 +1501,18 @@ async function autoPingAllHosts() {
             delete hostTicketCreated[hostData.id];
 
             if (!wasTicketCreated) {
-                console.log(`✅ Host ${hostData.name} recovered before 2 minutes - no ticket created`);
+                console.log(`âœ… Host ${hostData.name} recovered before 2 minutes - no ticket created`);
             }
 
             // Send Telegram Notification (unless in maintenance)
             const maintenanceUp = isHostInMaintenance(hostData.id);
             if (maintenanceUp) {
-                console.log(`🔧 Host ${hostData.name} is in maintenance - suppressing up notification`);
+                console.log(`ðŸ”§ Host ${hostData.name} is in maintenance - suppressing up notification`);
             } else {
-                await sendTelegramNotification(`🟢 Host Online\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nLatency: ${result.time}ms`);
+                await sendTelegramNotification(`ðŸŸ¢ Host Online\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nLatency: ${result.time}ms`);
                 // Also send push notification with unique tag
                 await sendPushNotificationToAll({
-                    title: '🟢 Host Online',
+                    title: 'ðŸŸ¢ Host Online',
                     body: `${hostData.name} is back online (${result.time}ms)`,
                     tag: `host-up-${hostData.id}-${Date.now()}`
                 });
@@ -1805,7 +1576,7 @@ function startAutoPing() {
 
     // Start immediately
     runPingLoop();
-    console.log(`🔄 Auto-ping started (every ${PROBE_INTERVAL / 1000} seconds, ${PROBE_DOWN_COUNT} failures to mark offline)`);
+    console.log(`ðŸ”„ Auto-ping started (every ${PROBE_INTERVAL / 1000} seconds, ${PROBE_DOWN_COUNT} failures to mark offline)`);
 }
 
 // Stop auto ping
@@ -1814,7 +1585,7 @@ function stopAutoPing() {
         clearTimeout(autoPingInterval); // Change to clearTimeout
         autoPingInterval = null;
     }
-    console.log('⏹️ Auto-ping stopped');
+    console.log('â¹ï¸ Auto-ping stopped');
 }
 
 // SSE endpoint for real-time updates (SECURED)
@@ -1831,12 +1602,12 @@ app.get('/api/events', requireAuth, (req, res) => {
 
     // Add client to list
     sseClients.push(res);
-    console.log(`📡 Client connected (User: ${req.session.userId}). Total clients: ${sseClients.length}`);
+    console.log(`ðŸ“¡ Client connected (User: ${req.session.userId}). Total clients: ${sseClients.length}`);
 
     // Remove client on disconnect
     req.on('close', () => {
         sseClients = sseClients.filter(client => client !== res);
-        console.log(`📡 Client disconnected. Total clients: ${sseClients.length}`);
+        console.log(`ðŸ“¡ Client disconnected. Total clients: ${sseClients.length}`);
     });
 });
 
@@ -2046,7 +1817,7 @@ app.post('/api/hosts/:id/snmp/scan', requireAuth, async (req, res) => {
         const community = req.body.community || hostData.snmpCommunity || 'public';
         const version = req.body.version || hostData.snmpVersion || '2c';
 
-        console.log(`🔍 Scanning interfaces for ${hostData.name} (${hostData.host})...`);
+        console.log(`ðŸ” Scanning interfaces for ${hostData.name} (${hostData.host})...`);
         const interfaces = await snmpService.getInterfaces(hostData.host, community, version);
         res.json(interfaces);
     } catch (error) {
@@ -2129,7 +1900,7 @@ app.post('/api/settings/test-telegram', requireAdmin, (req, res) => {
     // Use GET with URL-encoded parameters (like MikroTik The Dude)
     const params = new URLSearchParams({
         chat_id: chatToUse,
-        text: '🔔 *Network Monitor Test Notification*\n\nThis is a test message from your Network Monitor.',
+        text: 'ðŸ”” *Network Monitor Test Notification*\n\nThis is a test message from your Network Monitor.',
         parse_mode: 'Markdown'
     });
 
@@ -3283,7 +3054,7 @@ app.post('/api/push/subscribe', requireAuth, (req, res) => {
                 createdAt: new Date().toISOString()
             });
             savePushSubscriptions();
-            console.log(`📱 New push subscription added. Total: ${pushSubscriptions.length}`);
+            console.log(`ðŸ“± New push subscription added. Total: ${pushSubscriptions.length}`);
         }
 
         res.json({ success: true, message: 'Subscribed to push notifications' });
@@ -3309,7 +3080,7 @@ app.post('/api/push/unsubscribe', requireAuth, (req, res) => {
 
         if (pushSubscriptions.length < initialLength) {
             savePushSubscriptions();
-            console.log(`📱 Push subscription removed. Total: ${pushSubscriptions.length}`);
+            console.log(`ðŸ“± Push subscription removed. Total: ${pushSubscriptions.length}`);
         }
 
         res.json({ success: true, message: 'Unsubscribed from push notifications' });
@@ -3339,7 +3110,7 @@ app.post('/api/push/test', requireAuth, async (req, res) => {
         }
 
         await sendPushNotificationToAll({
-            title: '🔔 Test Notification',
+            title: 'ðŸ”” Test Notification',
             body: 'Push notifications are working!',
             tag: 'test-notification'
         });
@@ -3926,11 +3697,11 @@ async function pollSnmpTraffic() {
 
 function startSnmpPolling() {
     setInterval(pollSnmpTraffic, 5000); // 5 seconds
-    console.log('📡 SNMP Polling started (SQLite storage)');
+    console.log('ðŸ“¡ SNMP Polling started (SQLite storage)');
 }
 
 app.listen(PORT, () => {
-    console.log(`🌐 Network Monitor running at http://localhost:${PORT}`);
+    console.log(`ðŸŒ Network Monitor running at http://localhost:${PORT}`);
     // Start auto-ping by default
     startAutoPing();
 
