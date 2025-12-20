@@ -373,8 +373,11 @@ let webhooks = [];
 // let snmpTraffic = {}; // DEPRECATED: Traffic data now stored in SQLite database
 
 // ========================================
-// Data Persistence Functions
+// Data Persistence Functions - Now using SQLite
 // ========================================
+
+// Flag to track data source ('sqlite' after first migration, 'json' initially)
+let dataSource = 'sqlite';
 
 function loadData() {
     try {
@@ -475,6 +478,16 @@ function loadData() {
 
 function saveHosts() {
     try {
+        // Save to SQLite (sync memory state to DB)
+        for (const host of monitoredHosts) {
+            const existing = databaseService.getHostById(host.id);
+            if (existing) {
+                databaseService.updateHost(host.id, host);
+            } else {
+                databaseService.createHost(host);
+            }
+        }
+        // Also save to JSON as backup
         fs.writeFileSync(HOSTS_FILE, JSON.stringify(monitoredHosts, null, 2));
     } catch (error) {
         console.error('Error saving hosts:', error);
@@ -491,6 +504,16 @@ function saveLogs() {
 
 function saveUsers() {
     try {
+        // Sync to SQLite
+        for (const user of users) {
+            const existing = databaseService.getUserById(user.id);
+            if (existing) {
+                databaseService.updateUser(user.id, user);
+            } else {
+                databaseService.createUser(user);
+            }
+        }
+        // Also save to JSON as backup
         fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
     } catch (error) {
         console.error('Error saving users:', error);
@@ -499,6 +522,18 @@ function saveUsers() {
 
 function saveTickets() {
     try {
+        // Sync to SQLite
+        for (const ticket of tickets) {
+            const existing = databaseService.getTicketById(ticket.id);
+            if (existing) {
+                databaseService.updateTicket(ticket.id, ticket);
+            } else {
+                databaseService.createTicket(ticket);
+            }
+        }
+        // Save counters as setting
+        databaseService.setSetting('ticketCounters', ticketCounters);
+        // Also save to JSON as backup
         fs.writeFileSync(TICKETS_FILE, JSON.stringify({ tickets, counters: ticketCounters }, null, 2));
     } catch (error) {
         console.error('Error saving tickets:', error);
@@ -507,6 +542,9 @@ function saveTickets() {
 
 function saveSettings() {
     try {
+        // Save to SQLite
+        databaseService.setSetting('telegram', telegramConfig);
+        // Also save to JSON as backup
         const settings = {
             telegram: telegramConfig
         };
@@ -518,6 +556,17 @@ function saveSettings() {
 
 function saveHostGroups() {
     try {
+        // Sync to SQLite
+        for (const group of hostGroups) {
+            const dbGroups = databaseService.getAllHostGroups();
+            const existing = dbGroups.find(g => g.id === group.id);
+            if (existing) {
+                databaseService.updateHostGroup(group.id, group);
+            } else {
+                databaseService.createHostGroup(group);
+            }
+        }
+        // Also save to JSON as backup
         fs.writeFileSync(HOST_GROUPS_FILE, JSON.stringify(hostGroups, null, 2));
     } catch (error) {
         console.error('Error saving host groups:', error);
