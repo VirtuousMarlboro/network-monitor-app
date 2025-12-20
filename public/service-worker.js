@@ -1,5 +1,5 @@
 // Service Worker for Network Monitor PWA
-const CACHE_NAME = 'netmonitor-v2'; // Updated version to force refresh
+const CACHE_NAME = 'netmonitor-v3'; // iOS fix - removed incompatible notification options
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -73,9 +73,7 @@ self.addEventListener('push', (event) => {
         body: 'Notifikasi baru',
         icon: '/logo.png',
         badge: '/logo.png',
-        tag: 'netmonitor-notification',
-        requireInteraction: true,
-        silent: false // Make sure to play sound
+        tag: 'netmonitor-notification'
     };
 
     if (event.data) {
@@ -87,25 +85,17 @@ self.addEventListener('push', (event) => {
         }
     }
 
+    // iOS Safari has limited notification support
+    // Only use options that are universally supported
     const options = {
         body: data.body,
         icon: data.icon || '/logo.png',
         badge: data.badge || '/logo.png',
         tag: data.tag || 'netmonitor-notification',
-        requireInteraction: true, // Keep notification visible until user interacts
-        silent: false, // Play sound
-        renotify: true, // Always notify even if same tag
-        vibrate: [200, 100, 200, 100, 200],
         data: {
             url: data.url || '/',
             timestamp: Date.now()
-        },
-        // iOS needs these for better display
-        image: undefined, // Can add image if needed
-        actions: [
-            { action: 'open', title: '📱 Buka' },
-            { action: 'close', title: '❌ Tutup' }
-        ]
+        }
     };
 
     // IMPORTANT: Must use waitUntil to ensure notification is shown

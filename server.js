@@ -1824,11 +1824,22 @@ app.post('/api/traceroute', (req, res) => {
         res.end();
     });
 
-    // Handle client disconnect
+    // Handle client disconnect - Force kill the traceroute process
     res.on('close', () => {
-        console.log('[DEBUG] Response closed, cleaning up');
-        if (!tracertProcess.killed) {
-            tracertProcess.kill();
+        console.log('[DEBUG] Response closed, killing tracert process');
+        try {
+            if (!tracertProcess.killed) {
+                // On Windows, use taskkill to forcefully terminate the process tree
+                if (process.platform === 'win32') {
+                    require('child_process').exec(`taskkill /PID ${tracertProcess.pid} /T /F`, (err) => {
+                        if (err) console.log('[DEBUG] taskkill error (may be already dead):', err.message);
+                    });
+                } else {
+                    tracertProcess.kill('SIGKILL');
+                }
+            }
+        } catch (e) {
+            console.log('[DEBUG] Error killing tracert process:', e.message);
         }
     });
 });
