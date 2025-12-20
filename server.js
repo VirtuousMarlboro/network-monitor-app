@@ -484,18 +484,28 @@ function loadData() {
     }
 }
 
-function saveHosts() {
+function saveHosts(hostToUpdate = null) {
     try {
-        // Save to SQLite (sync memory state to DB)
-        for (const host of monitoredHosts) {
-            const existing = databaseService.getHostById(host.id);
+        if (hostToUpdate) {
+            // Incremental update: save only the specific host to SQLite
+            const existing = databaseService.getHostById(hostToUpdate.id);
             if (existing) {
-                databaseService.updateHost(host.id, host);
+                databaseService.updateHost(hostToUpdate.id, hostToUpdate);
             } else {
-                databaseService.createHost(host);
+                databaseService.createHost(hostToUpdate);
+            }
+        } else {
+            // Full sync: save all hosts to SQLite (fallback)
+            for (const host of monitoredHosts) {
+                const existing = databaseService.getHostById(host.id);
+                if (existing) {
+                    databaseService.updateHost(host.id, host);
+                } else {
+                    databaseService.createHost(host);
+                }
             }
         }
-        // Also save to JSON as backup
+        // Always save to JSON as backup (until full migration)
         fs.writeFileSync(HOSTS_FILE, JSON.stringify(monitoredHosts, null, 2));
     } catch (error) {
         console.error('Error saving hosts:', error);
@@ -985,7 +995,8 @@ const hostRoutes = createHostRoutes({
     getUsers: () => users,
     addAuditLog,
     broadcastSSE,
-    middleware: authMiddleware
+    middleware: authMiddleware,
+    databaseService
 });
 app.use('/api/hosts', hostRoutes);  // /api/hosts/*
 

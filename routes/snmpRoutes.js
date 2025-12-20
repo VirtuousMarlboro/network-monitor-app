@@ -42,8 +42,12 @@ function createSnmpRoutes(deps) {
     // GET /api/hosts/:id/snmp/history - Get SNMP Traffic History (from SQLite)
     router.get('/:id/snmp/history', middleware.requireAuth, (req, res) => {
         const hostId = req.params.id;
-        const history = databaseService.getTrafficHistory(hostId, 500);
-        res.json({ history });
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 100;
+        const offset = (page - 1) * limit;
+
+        const result = databaseService.getTrafficHistoryPaginated(hostId, limit, offset);
+        res.json(result);
     });
 
     return router;

@@ -6,6 +6,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const { cacheService, CACHE_KEYS, TTL } = require('./cacheService');
 
 // Constants
 const DATA_DIR = path.join(__dirname, '..', 'data');
@@ -717,8 +718,21 @@ function deleteTicketComment(commentId) {
 // Settings Operations (Key-Value)
 // ========================================
 function getSetting(key) {
+    // Check cache first for common settings
+    if (key === 'telegram' || key === 'ticketCounters') {
+        const cached = cacheService.get(CACHE_KEYS.SETTINGS + '_' + key);
+        if (cached) return cached;
+    }
+
     const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
-    return row ? JSON.parse(row.value) : null;
+    const value = row ? JSON.parse(row.value) : null;
+
+    // Cache the result
+    if (key === 'telegram' || key === 'ticketCounters') {
+        cacheService.set(CACHE_KEYS.SETTINGS + '_' + key, value, TTL.LONG);
+    }
+
+    return value;
 }
 
 function setSetting(key, value) {
@@ -726,6 +740,11 @@ function setSetting(key, value) {
         INSERT OR REPLACE INTO settings (key, value, updated_at)
         VALUES (?, ?, ?)
     `).run(key, JSON.stringify(value), Date.now());
+
+    // Update cache
+    if (key === 'telegram' || key === 'ticketCounters') {
+        cacheService.set(CACHE_KEYS.SETTINGS + '_' + key, value, TTL.LONG);
+    }
 }
 
 function getAllSettings() {
