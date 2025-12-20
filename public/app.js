@@ -1168,6 +1168,7 @@ function getTicketStatusLabel(status) {
     switch (status) {
         case 'open': return 'Open';
         case 'in_progress': return 'In Progress';
+        case 'pending': return 'Pending';
         case 'resolved': return 'Resolved';
         default: return status;
     }
@@ -1415,7 +1416,21 @@ function openEditTicketModal(ticketId) {
         createdAtInput.onchange = updateCalculatedResponseTime;
     }
     if (firstResponseAtInput) {
-        firstResponseAtInput.onchange = updateCalculatedResponseTime;
+        firstResponseAtInput.onchange = (e) => {
+            updateCalculatedResponseTime();
+
+            // Auto-switch to "In Progress" if user sets First Response Time
+            // and current status is Open or Pending
+            if (e.target.value) {
+                const currentStatus = elements.editTicketStatus.value;
+                if (currentStatus === 'open' || currentStatus === 'pending') {
+                    elements.editTicketStatus.value = 'in_progress';
+                    // Trigger change event to handle any dependent logic (like Resolved At visibility)
+                    elements.editTicketStatus.dispatchEvent(new Event('change'));
+                    showNotification('Status otomatis diubah ke In Progress', 'info');
+                }
+            }
+        };
     }
 
 
@@ -2005,6 +2020,18 @@ function showModal(modal) {
 function hideModal(modal) {
     modal.classList.remove('show');
     document.body.style.overflow = '';
+
+    // Abort continuous ping if ping modal is closed
+    if (modal === elements.pingModal && currentPingController) {
+        currentPingController.abort();
+        currentPingController = null;
+    }
+
+    // Abort traceroute if traceroute modal is closed
+    if (modal === elements.tracerouteModal && currentTracerouteController) {
+        currentTracerouteController.abort();
+        currentTracerouteController = null;
+    }
 }
 
 // ========================================
@@ -2125,7 +2152,10 @@ async function handlePingHost(e) {
             if (done) break;
             const text = decoder.decode(value);
             elements.pingOutput.textContent += text;
-            elements.pingOutput.scrollTop = elements.pingOutput.scrollHeight;
+            // Use requestAnimationFrame for reliable auto-scroll after DOM update
+            requestAnimationFrame(() => {
+                elements.pingOutput.scrollTop = elements.pingOutput.scrollHeight;
+            });
         }
 
     } catch (error) {
@@ -3893,6 +3923,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const submitBtn = modal?.querySelector('.modal-footer .btn-primary');
                 if (submitBtn && !submitBtn.disabled) {
                     e.preventDefault();
+                    e.stopPropagation(); // Stop bubbling to document/global listener
                     submitBtn.click();
                 }
             }

@@ -112,13 +112,19 @@ function createTicketRoutes(deps) {
 
         let hostName = 'Unknown';
         let hostCid = null;
+        let validHostId = null;
         const hosts = getHosts();
 
         if (hostId) {
             const host = hosts.find(h => h.id === hostId);
             if (host) {
+                validHostId = host.id;
                 hostName = host.name;
                 hostCid = host.cid;
+            } else {
+                // If Host ID was sent but not found, treat as general ticket (Host: Unknown)
+                // This prevents Foreign Key constraint errors
+                validHostId = null;
             }
         }
 
@@ -136,7 +142,7 @@ function createTicketRoutes(deps) {
         }
 
         const ticket = createTicket(
-            hostId || null, hostName, hostCid, title, description || '',
+            validHostId, hostName, hostCid, title, description || '',
             'manual', priority || 'medium', attachments,
             null, picName || null, submitterId, submitterName, createdAt || null
         );

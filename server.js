@@ -1475,10 +1475,10 @@ async function autoPingAllHosts() {
             if (maintenanceDown) {
                 console.log(`ðŸ”§ Host ${hostData.name} is in maintenance - suppressing down notification`);
             } else {
-                await sendTelegramNotification(`ðŸ”´ Host Offline\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nTime: ${new Date(result.timestamp).toLocaleString()}`);
+                await sendTelegramNotification(`🔴 Host Offline\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nTime: ${new Date(result.timestamp).toLocaleString()}`);
                 // Also send push notification with unique tag
                 await sendPushNotificationToAll({
-                    title: 'ðŸ”´ Host Offline',
+                    title: '🔴 Host Offline',
                     body: `${hostData.name} (${hostData.host}) is down`,
                     tag: `host-down-${hostData.id}-${Date.now()}`
                 });
@@ -1558,10 +1558,10 @@ async function autoPingAllHosts() {
             if (maintenanceUp) {
                 console.log(`ðŸ”§ Host ${hostData.name} is in maintenance - suppressing up notification`);
             } else {
-                await sendTelegramNotification(`ðŸŸ¢ Host Online\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nLatency: ${result.time}ms`);
+                await sendTelegramNotification(`🟢 Host Online\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nLatency: ${result.time}ms`);
                 // Also send push notification with unique tag
                 await sendPushNotificationToAll({
-                    title: 'ðŸŸ¢ Host Online',
+                    title: '🟢 Host Online',
                     body: `${hostData.name} is back online (${result.time}ms)`,
                     tag: `host-up-${hostData.id}-${Date.now()}`
                 });
@@ -1833,7 +1833,7 @@ app.post('/api/traceroute', (req, res) => {
     });
 });
 
-// API: Ping (Streaming) - Using PowerShell for line-by-line output on Windows
+// API: Ping (Streaming) - Continuous ping until client disconnects
 app.post('/api/ping-stream', (req, res) => {
     console.log('[DEBUG] /api/ping-stream called');
     const { host } = req.body;
@@ -1855,11 +1855,12 @@ app.post('/api/ping-stream', (req, res) => {
     res.setHeader('Connection', 'keep-alive');
 
     // Use PowerShell for better streaming on Windows
-    console.log('[DEBUG] Running ping via PowerShell...');
+    // -t flag for continuous ping (stops when client disconnects)
+    console.log('[DEBUG] Running continuous ping via PowerShell...');
     const pingProcess = spawn('powershell', [
         '-NoProfile',
         '-Command',
-        `ping -n 4 ${host}`
+        `ping -t ${host}`
     ], {
         windowsHide: true
     });
@@ -1884,7 +1885,7 @@ app.post('/api/ping-stream', (req, res) => {
         if (!hasOutput) {
             res.write('No output received from ping command\n');
         }
-        res.write(`\n--- Ping completed ---`);
+        res.write(`\n--- Ping stopped ---`);
         res.end();
     });
 
@@ -1894,11 +1895,22 @@ app.post('/api/ping-stream', (req, res) => {
         res.end();
     });
 
-    // Handle client disconnect
+    // Handle client disconnect - Force kill the ping process
     res.on('close', () => {
-        console.log('[DEBUG] Response closed, cleaning up');
-        if (!pingProcess.killed) {
-            pingProcess.kill();
+        console.log('[DEBUG] Response closed, killing ping process');
+        try {
+            if (!pingProcess.killed) {
+                // On Windows, use taskkill to forcefully terminate the process tree
+                if (process.platform === 'win32') {
+                    require('child_process').exec(`taskkill /PID ${pingProcess.pid} /T /F`, (err) => {
+                        if (err) console.log('[DEBUG] taskkill error (may be already dead):', err.message);
+                    });
+                } else {
+                    pingProcess.kill('SIGKILL');
+                }
+            }
+        } catch (e) {
+            console.log('[DEBUG] Error killing ping process:', e.message);
         }
     });
 });

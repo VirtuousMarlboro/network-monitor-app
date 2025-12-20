@@ -613,14 +613,31 @@ function getTicketById(id) {
     };
 }
 
+// Track host IDs that have already been warned (prevents log spam during repeated syncs)
+const warnedMissingHostIds = new Set();
+
 function createTicket(ticket) {
+    // Validate hostId - set to null if host doesn't exist (prevents FK constraint error)
+    let validHostId = ticket.hostId;
+    if (validHostId) {
+        const hostExists = db.prepare('SELECT id FROM hosts WHERE id = ?').get(validHostId);
+        if (!hostExists) {
+            // Only warn once per hostId to prevent log spam
+            if (!warnedMissingHostIds.has(validHostId)) {
+                console.warn(`createTicket: Host ID ${validHostId} not found, setting to null`);
+                warnedMissingHostIds.add(validHostId);
+            }
+            validHostId = null;
+        }
+    }
+
     const stmt = db.prepare(`
         INSERT INTO tickets (id, host_id, cid, source, status, priority, description, 
             resolution, pic, submitter, created_at, first_response_at, resolved_at, created_by)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
-        ticket.id, ticket.hostId, ticket.cid, ticket.source, ticket.status || 'open',
+        ticket.id, validHostId, ticket.cid, ticket.source, ticket.status || 'open',
         ticket.priority || 'medium', ticket.description, ticket.resolution,
         ticket.pic, ticket.submitter, ticket.createdAt || Date.now(),
         ticket.firstResponseAt, ticket.resolvedAt, ticket.createdBy
@@ -631,7 +648,22 @@ function updateTicket(id, data) {
     const fields = [];
     const values = [];
 
-    if (data.hostId !== undefined) { fields.push('host_id = ?'); values.push(data.hostId); }
+    // Validate hostId if provided - set to null if host doesn't exist
+    if (data.hostId !== undefined) {
+        let validHostId = data.hostId;
+        if (validHostId) {
+            const hostExists = db.prepare('SELECT id FROM hosts WHERE id = ?').get(validHostId);
+            if (!hostExists) {
+                if (!warnedMissingHostIds.has(validHostId)) {
+                    console.warn(`updateTicket: Host ID ${validHostId} not found, setting to null`);
+                    warnedMissingHostIds.add(validHostId);
+                }
+                validHostId = null;
+            }
+        }
+        fields.push('host_id = ?');
+        values.push(validHostId);
+    }
     if (data.cid !== undefined) { fields.push('cid = ?'); values.push(data.cid); }
     if (data.source !== undefined) { fields.push('source = ?'); values.push(data.source); }
     if (data.status !== undefined) { fields.push('status = ?'); values.push(data.status); }
