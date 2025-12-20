@@ -323,14 +323,6 @@ server {
 
 ---
 
-## Troubleshooting
-
-### Push Notification Tidak Muncul (iOS)
-1. Pastikan iOS 16.4+
-2. Pastikan PWA di-install via "Add to Home Screen"
-3. Buka PWA dari Home Screen (bukan Safari)
-4. Cek Settings > Notifications > [App Name]
-
 ### Database Locked Error
 ```bash
 # Stop aplikasi
