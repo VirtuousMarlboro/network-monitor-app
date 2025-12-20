@@ -18,6 +18,8 @@ const { wafMiddleware, getWafStats } = require('./services/wafService');
 const webpush = require('web-push');
 const snmpService = require('./services/snmpService');
 const databaseService = require('./services/databaseService');
+const { cacheService, CACHE_KEYS, TTL } = require('./services/cacheService');
+const { createLoggingMiddleware } = require('./middleware/logging');
 
 // ========================================
 // Modular Routes & Middleware (Phase 3 Refactoring)
@@ -310,6 +312,12 @@ app.use(session({
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
+
+// ========================================
+// SECURITY: Request Logging Middleware
+// ========================================
+app.use(createLoggingMiddleware(databaseService));
+console.log('📝 Request logging enabled');
 
 // Store monitored hosts in memory (loaded from file on startup)
 let monitoredHosts = [];

@@ -326,6 +326,39 @@ function getTrafficHistory(hostId, limit = 500) {
 }
 
 /**
+ * Get traffic history with pagination (offset-based)
+ * @param {string} hostId - Host ID
+ * @param {number} limit - Number of records per page
+ * @param {number} offset - Number of records to skip
+ * @returns {Object} { data: [], total: number, hasMore: boolean }
+ */
+function getTrafficHistoryPaginated(hostId, limit = 100, offset = 0) {
+    try {
+        const countStmt = db.prepare('SELECT COUNT(*) as total FROM traffic_history WHERE host_id = ?');
+        const { total } = countStmt.get(hostId);
+
+        const dataStmt = db.prepare(`
+            SELECT * FROM traffic_history 
+            WHERE host_id = ? 
+            ORDER BY timestamp DESC 
+            LIMIT ? OFFSET ?
+        `);
+        const rows = dataStmt.all(hostId, limit, offset);
+
+        return {
+            data: rows.reverse(), // Chronological order
+            total,
+            hasMore: offset + limit < total,
+            page: Math.floor(offset / limit) + 1,
+            totalPages: Math.ceil(total / limit)
+        };
+    } catch (err) {
+        console.error('Error getting paginated traffic history:', err.message);
+        return { data: [], total: 0, hasMore: false, page: 1, totalPages: 0 };
+    }
+}
+
+/**
  * Get the last traffic entry for rate calculation
  */
 function getLastTrafficEntry(hostId) {
@@ -864,6 +897,7 @@ module.exports = {
     // Traffic
     storeTrafficEntry,
     getTrafficHistory,
+    getTrafficHistoryPaginated,
     getLastTrafficEntry,
     cleanupTrafficHistory,
     // Logs
