@@ -1,0 +1,28 @@
+{
+    "name": "network-monitor-app",
+    "version": "1.0.0",
+    "description": "Network monitoring application based on ping",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "node server.js"
+    },
+    "dependencies": {
+        "archiver": "^7.0.1",
+        "bcryptjs": "^3.0.3",
+        "better-sqlite3": "^12.5.0",
+        "better-sqlite3-session-store": "^0.1.0",
+        "cors": "^2.8.5",
+        "dotenv": "^17.2.3",
+        "express": "^4.18.2",
+        "express-rate-limit": "^8.2.1",
+        "express-session": "^1.18.2",
+        "helmet": "^8.1.0",
+        "multer": "^2.0.2",
+        "net-snmp": "^3.26.0",
+        "node-cron": "^4.2.1",
+        "ping": "^0.4.4",
+        "web-push": "^3.6.7",
+        "xlsx": "^0.18.5"
+    }
+}

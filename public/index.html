@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Monitor</title>
+    <meta name="description" content="Real-time Network Monitoring Application">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="NetMonitor">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <link rel="stylesheet" href="styles.css?v=1.1">
+    <!-- Alpine.js -->
+    <script defer src="js/alpine.min.js"></script>
+    <script src="js/store.js"></script>
+    <!-- Alpine Components -->
+    <script src="js/components/stats-dashboard.js"></script>
+    <script src="js/components/host-card.js"></script>
+    <script src="js/components/traffic-chart.js"></script>
+</head>
+
+<body x-data>
+    <!-- Notifications Container -->
+    <div class="notifications-container" id="notificationsContainer"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <img src="logo.png" alt="Network Monitor Logo"
+                            style="width: 100%; height: 100%; object-fit: contain;">
+                    </div>
+                    <h1>Network Monitor</h1>
+                </div>
+                <button class="hamburger-btn" id="mobileMenuBtn" aria-label="Toggle Menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="header-actions" id="headerActions">
+                    <button class="btn btn-ghost btn-sm" id="editProfileBtn" title="Edit Profile">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span id="currentUserName"></span>
+                    </button>
+                    <!-- User/Settings Group: Icons only -->
+                    <div class="header-btn-group">
+                        <button class="btn btn-ghost btn-icon" id="themeToggleBtn" title="Ganti Tema">
+                            <!-- Sun Icon (for Dark Mode) -->
+                            <svg class="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                <line x1="1" y1="12" x2="3" y2="12"></line>
+                                <line x1="21" y1="12" x2="23" y2="12"></line>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                            </svg>
+                            <!-- Moon Icon (for Light Mode) -->
+                            <svg class="theme-icon-moon hidden" xmlns="http://www.w3.org/2000/svg" width="18"
+                                height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                            </svg>
+                        </button>
+                        <button class="btn btn-ghost btn-icon hidden" id="settingsBtn" title="API & Webhooks"
+                            onclick="openApiWebhooksModal()">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path
+                                    d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z">
+                                </path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                        <button class="btn btn-ghost btn-icon" id="pushNotifBtn" title="Push Notifications">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                            </svg>
+                        </button>
+                        <button class="btn btn-ghost btn-sm" id="logoutBtn" title="Keluar">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                <polyline points="16 17 21 12 16 7"></polyline>
+                                <line x1="21" y1="12" x2="9" y2="12"></line>
+                            </svg>
+                            Logout
+                        </button>
+                    </div>
+
+                    <div class="header-separator"></div>
+
+                    <!-- Main Actions Group -->
+                    <div class="header-btn-group">
+                        <button class="btn btn-primary btn-sm" id="pingAllBtn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                            </svg>
+                            Ping Semua
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="addHostBtn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="16" />
+                                <line x1="8" y1="12" x2="16" y2="12" />
+                            </svg>
+                            + Host
+                        </button>
+                        <button class="btn btn-outline btn-sm" id="maintenanceBtn" title="Jadwal Maintenance"
+                            style="display: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <path
+                                    d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                            </svg>
+                            Maintenance
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Cards -->
+        <section class="stats-section">
+            <div class="stat-card online" id="statCardOnline">
+                <div class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value" id="onlineCount" x-text="$store.app.stats.online">0</span>
+                    <span class="stat-label">Online</span>
+                </div>
+            </div>
+            <div class="stat-card offline" id="statCardOffline">
+                <div class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="15" y1="9" x2="9" y2="15" />
+                        <line x1="9" y1="9" x2="15" y2="15" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value" id="offlineCount" x-text="$store.app.stats.offline">0</span>
+                    <span class="stat-label">Offline</span>
+                </div>
+            </div>
+            <div class="stat-card total active" id="statCardTotal">
+                <div class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                        <line x1="8" y1="21" x2="16" y2="21" />
+                        <line x1="12" y1="17" x2="12" y2="21" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value" id="totalCount" x-text="$store.app.stats.total">0</span>
+                    <span class="stat-label">Total Host</span>
+                </div>
+            </div>
+            <div class="stat-card latency">
+                <div class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value" id="avgLatency" x-text="$store.app.stats.avgLatency">-</span>
+                    <span class="stat-label">Avg Latency</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Ping Section -->
+        <section class="quick-ping-section">
+            <div class="quick-ping-card">
+                <h3>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                    </svg>
+                    Quick Ping
+                </h3>
+                <div class="quick-ping-form">
+                    <input type="text" id="quickPingInput" placeholder="Masukkan IP atau hostname (contoh: 8.8.8.8)">
+                    <button class="btn btn-primary" id="quickPingBtn">Ping</button>
+                </div>
+                <div class="quick-ping-result" id="quickPingResult"></div>
+            </div>
+        </section>
+
+        <!-- Navigation Tabs -->
+        <div class="view-tabs">
+            <button class="tab-btn active" data-view="hosts" id="hostsTabBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+                Daftar Host
+            </button>
+            <button class="tab-btn" data-view="map" id="mapTabBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+                    <line x1="8" y1="2" x2="8" y2="18" />
+                    <line x1="16" y1="6" x2="16" y2="22" />
+                </svg>
+                Peta Lokasi
+            </button>
+            <button class="tab-btn" data-view="logs" id="logsTabBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                </svg>
+                Log Status
+            </button>
+            <button class="tab-btn" data-view="tickets" id="ticketsTabBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <line x1="10" y1="9" x2="8" y2="9" />
+                </svg>
+                Tiket
+            </button>
+            <button class="tab-btn" data-view="stats" id="statsTabBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="20" x2="18" y2="10" />
+                    <line x1="12" y1="20" x2="12" y2="4" />
+                    <line x1="6" y1="20" x2="6" y2="14" />
+                </svg>
+                Statistik
+            </button>
+            <button class="tab-btn hidden" data-view="users" id="usersTabBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                Manajemen User
+            </button>
+            <button class="tab-btn hidden" data-view="audit" id="auditTabBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                Audit Log
+            </button>
+        </div>
+
+        <!-- Hosts List -->
+        <section class="hosts-section">
+            <div class="section-header">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                        <line x1="8" y1="21" x2="16" y2="21" />
+                        <line x1="12" y1="17" x2="12" y2="21" />
+                    </svg>
+                    Daftar Host
+                </h2>
+                <div class="monitoring-controls">
+                    <div class="search-control">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="hostSearchInput" placeholder="Cari host (nama/IP/CID)...">
+                    </div>
+                    <select id="hostGroupFilter" class="filter-select" title="Filter berdasarkan grup">
+                        <option value="">Semua Grup</option>
+                    </select>
+                    <div class="host-actions-dropdown">
+                        <button class="btn btn-secondary btn-sm dropdown-toggle" id="hostActionsBtn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="1"></circle>
+                                <circle cx="19" cy="12" r="1"></circle>
+                                <circle cx="5" cy="12" r="1"></circle>
+                            </svg>
+                            Aksi
+                        </button>
+                        <div class="dropdown-menu" id="hostActionsMenu">
+                            <button class="dropdown-item" id="exportHostsJsonBtn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                                Export JSON
+                            </button>
+                            <button class="dropdown-item" id="exportHostsCsvBtn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                </svg>
+                                Export CSV
+                            </button>
+                            <button class="dropdown-item" id="importHostsBtn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                Import Hosts
+                            </button>
+                            <hr class="dropdown-divider">
+                            <button class="dropdown-item" id="manageGroupsBtn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2">
+                                    <path
+                                        d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                                </svg>
+                                Kelola Grup
+                            </button>
+                        </div>
+                    </div>
+                    <div class="auto-ping-control">
+                        <span class="auto-ping-indicator active" id="autoPingStatus">ON</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="autoPingToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span>Auto Ping (10s)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hosts-grid" id="hostsGrid">
+                <!-- Hosts will be rendered here -->
+            </div>
+
+            <div class="empty-state" id="emptyState">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="1.5">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 16v-4" />
+                    <path d="M12 8h.01" />
+                </svg>
+                <h3>Belum Ada Host</h3>
+                <p>Tambahkan host atau IP address untuk mulai memantau jaringan</p>
+                <button class="btn btn-primary" id="addFirstHostBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="16" />
+                        <line x1="8" y1="12" x2="16" y2="12" />
+                    </svg>
+                    Tambah Host Pertama
+                </button>
+            </div>
+        </section>
+
+        <!-- Map Section -->
+        <section class="map-section hidden" id="mapSection">
+            <div class="section-header">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+                        <line x1="8" y1="2" x2="8" y2="18" />
+                        <line x1="16" y1="6" x2="16" y2="22" />
+                    </svg>
+                    Peta Lokasi Host
+                </h2>
+                <p class="map-hint">Klik marker untuk melihat detail host. Klik kanan marker untuk mengubah lokasi.</p>
+            </div>
+            <div class="map-container" style="position: relative;">
+                <div id="networkMap" class="network-map"></div>
+                <button class="map-restore-btn" id="restoreMapBtn" title="Reset Tampilan Peta">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                        <path d="M3 3v5h5" />
+                    </svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- Logs Section -->
+        <section class="logs-section hidden" id="logsSection">
+            <div class="section-header">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
+                    Log Perubahan Status
+                </h2>
+                <div class="logs-controls">
+                    <div class="filter-group">
+                        <label for="logHostFilter">Filter Host:</label>
+                        <select id="logHostFilter" class="filter-select">
+                            <option value="">Semua Host</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" id="refreshLogsBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10" />
+                            <polyline points="1 20 1 14 7 14" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="logs-list" id="logsList">
+                <div class="logs-empty">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="1.5">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    <p>Belum ada log perubahan status</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tickets Section -->
+        <section class="tickets-section hidden" id="ticketsSection">
+            <div class="section-header">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                        <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    Daftar Tiket
+                </h2>
+                <div class="ticket-toolbar">
+                    <div class="search-control">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="ticketSearchInput" placeholder="Cari tiket...">
+                    </div>
+                    <select id="ticketStatusFilter" class="filter-select">
+                        <option value="">Semua Status</option>
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                    </select>
+
+                    <select id="ticketHostFilter" class="filter-select">
+                        <option value="">Semua Host</option>
+                    </select>
+
+                    <select id="ticketSubmitterFilter" class="filter-select">
+                        <option value="">Semua Submitter</option>
+                    </select>
+
+                    <input type="date" id="ticketDateFilter" class="filter-select" title="Filter Tanggal">
+
+                    <div class="toolbar-actions">
+                        <button class="btn btn-outline" id="exportTicketsBtn" title="Export to Excel">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            <span>Export</span>
+                        </button>
+                        <button class="btn btn-primary" id="openCreateTicketModalBtn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            <span>Buat Tiket</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="tickets-list" id="ticketsList">
+                <div class="tickets-empty">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="1.5">
+                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                        <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    <p>Belum ada tiket</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Users Section (Admin Only) -->
+        <section class="users-section hidden" id="usersSection">
+            <div class="section-header">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    Manajemen User
+                </h2>
+                <button class="btn btn-primary" id="addUserBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Tambah User
+                </button>
+            </div>
+            <div class="table-container">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Nama</th>
+                            <th>Role</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Users rendered here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Statistics Section (Phase 2) -->
+        <section class="dashboard-stats-section hidden" id="statsSection">
+            <div class="section-header">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10" />
+                        <line x1="12" y1="20" x2="12" y2="4" />
+                        <line x1="6" y1="20" x2="6" y2="14" />
+                    </svg>
+                    Dashboard Statistik
+                </h2>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="stats-summary-cards" id="statsSummaryCards">
+                <div class="summary-stat-card summary-stat-card-loading">
+                    <p>Memuat statistik...</p>
+                </div>
+            </div>
+
+            <!-- Uptime Table -->
+            <div class="stats-uptime-container">
+                <h3>Uptime Host (24 Jam Terakhir)</h3>
+                <div id="statsUptimeTable">
+                    <p class="text-muted">Memuat data uptime...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Audit Log Section (Phase 1) -->
+        <section class="audit-section hidden" id="auditSection"></section>
+
+        <!-- Footer Copyright -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <p>&copy; <span id="currentYear"></span> Network Monitoring System. All rights reserved.</p>
+                <p class="footer-tagline">Developed by Muhammad Ilhaam Fadhiil</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Add User Modal -->
+    <div class="modal-overlay" id="addUserModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Tambah User Baru</h3>
+                <button class="modal-close" id="closeAddUserModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newUsernameInput">Username</label>
+                    <input type="text" id="newUsernameInput" placeholder="username">
+                </div>
+                <div class="form-group">
+                    <label for="newPasswordInput">Password</label>
+                    <input type="password" id="newPasswordInput" placeholder="password">
+                </div>
+                <div class="form-group">
+                    <label for="newNameInput">Nama Lengkap</label>
+                    <input type="text" id="newNameInput" placeholder="Nama User">
+                </div>
+                <div class="form-group">
+                    <label for="newRoleInput">Role</label>
+                    <select id="newRoleInput">
+                        <option value="user">User Biasa</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" id="cancelAddUserModalBtn">Batal</button>
+                <button class="btn btn-primary" id="saveUserBtn">Simpan User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scheduled Maintenance Modal -->
+    <div class="modal-overlay" id="maintenanceModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                    </svg>
+                    Jadwal Maintenance
+                </h3>
+                <button class="modal-close" id="closeMaintenanceModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Create New Maintenance Form -->
+                <div class="form-section-title">Buat Jadwal Baru</div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="maintenanceAllHosts">
+                        Semua Host
+                    </label>
+                </div>
+
+                <div class="form-group" id="maintenanceHostSelectGroup">
+                    <label for="maintenanceHostSelect">Pilih Host (Ctrl+Click untuk multi-select)</label>
+                    <select id="maintenanceHostSelect" multiple style="height: 150px;">
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="maintenanceStartTime">Waktu Mulai</label>
+                        <input type="datetime-local" id="maintenanceStartTime">
+                    </div>
+                    <div class="form-group">
+                        <label for="maintenanceEndTime">Waktu Selesai</label>
+                        <input type="datetime-local" id="maintenanceEndTime">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="maintenanceReason">Alasan Maintenance</label>
+                    <input type="text" id="maintenanceReason" placeholder="Contoh: Upgrade firmware router">
+                </div>
+
+                <button class="btn btn-primary" id="createMaintenanceBtn" style="width: 100%; margin-top: 12px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Buat Jadwal Maintenance
+                </button>
+
+                <hr style="margin: 24px 0; border-color: var(--border-color);">
+
+                <!-- Maintenance List -->
+                <div class="form-section-title">Jadwal Maintenance Aktif</div>
+                <div id="maintenanceList" class="maintenance-list">
+                    <p class="text-muted">Tidak ada jadwal maintenance aktif.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal-overlay" id="editUserModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Edit User</h3>
+                <button class="modal-close" id="closeEditUserModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editUserId">
+                <div class="form-group">
+                    <label for="editUsernameInput">Username</label>
+                    <input type="text" id="editUsernameInput" placeholder="username">
+                </div>
+                <div class="form-group">
+                    <label for="editPasswordInput">Password Baru (Biarkan kosong jika tidak diubah)</label>
+                    <input type="password" id="editPasswordInput" placeholder="password baru">
+                </div>
+                <div class="form-group">
+                    <label for="editUserRealNameInput">Nama Lengkap</label>
+                    <input type="text" id="editUserRealNameInput" placeholder="Nama User">
+                </div>
+                <div class="form-group">
+                    <label for="editUserRoleInput">Role</label>
+                    <select id="editUserRoleInput">
+                        <option value="user">User Biasa</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" id="cancelEditUserModalBtn">Batal</button>
+                <button class="btn btn-primary" id="saveEditUserBtn">Simpan Perubahan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Host Modal -->
+    <div class="modal-overlay" id="addHostModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Tambah Host Baru</h3>
+                <button class="modal-close" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="hostInput">IP Address / Hostname</label>
+                    <input type="text" id="hostInput" placeholder="contoh: 192.168.1.1 atau google.com">
+                </div>
+                <div class="form-group">
+                    <label for="nameInput">Nama (opsional)</label>
+                    <input type="text" id="nameInput" placeholder="contoh: Router Utama">
+                </div>
+                <div class="form-group">
+                    <label for="cidInput">CID (Customer ID - opsional)</label>
+                    <input type="text" id="cidInput" placeholder="contoh: CID-12345">
+                </div>
+                <div class="form-group">
+                    <label for="hostGroupSelect">Grup (opsional)</label>
+                    <select id="hostGroupSelect">
+                        <option value="">-- Tidak Ada Grup --</option>
+                    </select>
+                </div>
+
+                <!-- Location Toggle -->
+                <div class="location-toggle">
+                    <label class="toggle-container">
+                        <input type="checkbox" id="addLocationToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span>Tambahkan lokasi (opsional)</span>
+                </div>
+
+                <!-- Location Fields (hidden by default) - placed right after toggle -->
+                <div class="add-host-location-fields hidden" id="addHostLocationFields">
+                    <div class="address-search">
+                        <div class="address-search-input">
+                            <input type="text" id="addHostAddressInput" placeholder="Cari alamat, kota, atau tempat...">
+                            <button class="btn btn-primary" id="searchAddHostAddressBtn" type="button">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <path d="m21 21-4.35-4.35" />
+                                </svg>
+                                Cari
+                            </button>
+                        </div>
+                        <div class="search-results" id="addHostSearchResults"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="addHostCoordinatesInput">Koordinat (Latitude, Longitude)</label>
+                        <input type="text" id="addHostCoordinatesInput" placeholder="-6.2088, 106.8456">
+                        <small style="color: var(--text-muted); font-size: 0.8rem;">Tips: Copy-paste langsung dari
+                            Google Maps</small>
+                    </div>
+                </div>
+
+                <!-- SNMP Configuration Toggle -->
+                <div class="location-toggle">
+                    <label class="toggle-container">
+                        <input type="checkbox" id="addSnmpEnabled">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span>Enable SNMP Monitoring</span>
+                </div>
+
+                <!-- SNMP Fields (hidden by default) -->
+                <div class="add-host-snmp-fields" id="addHostSnmpFields" style="display: none;">
+                    <div class="form-row" style="display: flex; gap: 1rem;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="addSnmpCommunity">Community</label>
+                            <input type="text" id="addSnmpCommunity" placeholder="public" value="public">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="addSnmpVersion">Version</label>
+                            <select id="addSnmpVersion">
+                                <option value="1">v1</option>
+                                <option value="2c" selected>v2c</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.5rem 0 0 0; font-style: italic;">
+                        💡 Simpan host dulu, kemudian scan interface dari Edit Host
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" id="cancelModalBtn">Batal</button>
+                <button class="btn btn-primary" id="saveHostBtn">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Ticket Modal -->
+    <div class="modal-overlay" id="createTicketModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Buat Tiket Baru</h3>
+                <button class="modal-close" id="closeCreateTicketBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="ticketHostSearchInput">Host (Opsional)</label>
+                    <div class="searchable-select" id="ticketHostSearchContainer">
+                        <input type="text" id="ticketHostSearchInput" placeholder="Cari Host..." autocomplete="off">
+                        <svg class="search-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                        <input type="hidden" id="ticketHostId">
+                        <div class="searchable-results hidden" id="ticketHostSearchResults"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="ticketTitleInput">Judul Tiket</label>
+                    <input type="text" id="ticketTitleInput" placeholder="Contoh: Gangguan Koneksi">
+                </div>
+                <div class="form-group">
+                    <label for="ticketDescInput">Deskripsi</label>
+                    <textarea id="ticketDescInput" rows="3" placeholder="Jelaskan masalah..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="ticketPrioritySelect">Prioritas</label>
+                    <select id="ticketPrioritySelect">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ticketPicInput">PIC / Customer</label>
+                    <input type="text" id="ticketPicInput" placeholder="Nama customer/penanggung jawab">
+                </div>
+
+                <!-- Response Time Inputs -->
+                <div class="response-time-info">
+                    <div class="form-group">
+                        <label for="createTicketCreatedAt">📅 Waktu Tiket Masuk</label>
+                        <input type="datetime-local" id="createTicketCreatedAt" class="datetime-input">
+                        <small class="form-hint">Kosongkan untuk menggunakan waktu saat ini</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="createTicketFirstResponseAt">📥 Waktu First Response</label>
+                        <input type="datetime-local" id="createTicketFirstResponseAt" class="datetime-input">
+                        <small class="form-hint">Opsional - isi jika sudah ada respon</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="ticketImageInput">Foto Pendukung (Opsional)</label>
+                    <div class="file-upload-container">
+                        <label class="file-upload-label" for="ticketImageInput">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            <span>Pilih Gambar</span>
+                        </label>
+                        <input type="file" id="ticketImageInput" accept="image/*" multiple>
+                        <div class="image-preview" id="ticketImagePreview"></div>
+                    </div>
+                    <small class="form-hint">Maks. 5 gambar, ukuran maks. 5MB per file</small>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" id="cancelCreateTicketBtn">Batal</button>
+                <button class="btn btn-primary" id="saveTicketBtn">Buat Tiket</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Ticket Modal -->
+    <div class="modal-overlay" id="editTicketModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Detail Tiket - <span id="editTicketIdDisplay"></span></h3>
+                <button class="modal-close" id="closeEditTicketBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editTicketId">
+                <div class="ticket-detail-info">
+                    <p><strong>Host:</strong> <span id="editTicketHost"></span></p>
+                    <p><strong>CID:</strong> <span id="editTicketCid"></span></p>
+                    <p><strong>Source:</strong> <span id="editTicketSource"></span></p>
+                    <p><strong>Created:</strong> <span id="editTicketCreated"></span></p>
+                </div>
+
+                <!-- Response Time Info Section - Editable -->
+                <div class="response-time-info" id="responseTimeInfo">
+                    <div class="form-group">
+                        <label for="editTicketCreatedAt">📅 Waktu Tiket Masuk</label>
+                        <input type="datetime-local" id="editTicketCreatedAt" class="datetime-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="editTicketFirstResponseAt">📥 Waktu First Response</label>
+                        <input type="datetime-local" id="editTicketFirstResponseAt" class="datetime-input">
+                        <small class="form-hint">Kosongkan jika belum ada respon</small>
+                    </div>
+                    <div class="response-time-calculated">
+                        <div class="info-row">
+                            <label>Dibuat:</label>
+                            <span id="editTicketCreatedDisplay">-</span>
+                        </div>
+                        <div class="info-row hidden" id="editTicketResolvedByContainer">
+                            <label>Resolved By:</label>
+                            <span id="editTicketResolvedBy" class="font-bold">-</span>
+                        </div>
+                        <div class="info-row">
+                            <label>Status:</label>
+                            <span id="editTicketStatusDisplay" class="font-bold">-</span>
+                        </div>
+                        <div class="response-time-row">
+                            <span class="label">⏱️ Response Time:</span>
+                            <span class="value" id="editTicketResponseTime">-</span>
+                        </div>
+                        <div class="response-time-row" id="resolvedAtRow" style="display: none;">
+                            <span class="label">🕐 Waktu Solved:</span>
+                            <span class="value" id="editTicketResolvedAt">-</span>
+                        </div>
+                        <div class="response-time-row" id="resolutionTimeRow" style="display: none;">
+                            <span class="label">✅ Resolution Time:</span>
+                            <span class="value" id="editTicketResolutionTime">-</span>
+                        </div>
+
+                        <!-- Manual Resolved At Input (Hidden by default) -->
+                        <div class="form-group" id="manualResolvedAtGroup" style="display: none; margin-top: 10px;">
+                            <label for="editTicketResolvedAtInput">Waktu Selesai (Manual)</label>
+                            <input type="datetime-local" id="editTicketResolvedAtInput">
+                            <small class="form-text text-muted">Biarkan kosong untuk menggunakan waktu sekarang.</small>
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div class="form-group">
+                    <label for="editTicketStatus">Status</label>
+                    <select id="editTicketStatus">
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editTicketPriority">Prioritas</label>
+                    <select id="editTicketPriority">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editTicketPic">PIC / Customer</label>
+                    <input type="text" id="editTicketPic" placeholder="Nama customer/penanggung jawab">
+                </div>
+                <div class="form-group">
+                    <label for="editTicketDesc">Deskripsi</label>
+                    <textarea id="editTicketDesc" rows="3"></textarea>
+                </div>
+
+                <!-- Ticket Attachments Section -->
+                <div class="ticket-attachments-section">
+                    <label>Lampiran Tiket</label>
+                    <div class="ticket-attachments-list" id="ticketAttachmentsList"></div>
+                </div>
+
+                <!-- Comments Section -->
+                <div class="ticket-comments-section">
+                    <label>Catatan Progress</label>
+                    <div class="ticket-comments-list" id="ticketCommentsList"></div>
+                    <div class="ticket-add-comment">
+                        <input type="text" id="newCommentInput" placeholder="Tambah catatan...">
+                        <label class="comment-image-btn" for="commentImageInput" title="Tambah gambar">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                        </label>
+                        <input type="file" id="commentImageInput" accept="image/*" style="display: none;">
+                        <button class="btn btn-primary btn-sm" id="addCommentBtn">Tambah</button>
+                    </div>
+                    <div class="image-preview" id="commentImagePreview"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger btn-sm" id="deleteTicketBtn">Hapus</button>
+                <button class="btn btn-ghost" id="cancelEditTicketBtn">Batal</button>
+                <button class="btn btn-primary" id="saveEditTicketBtn">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Traceroute Modal -->
+    <div class="modal-overlay" id="tracerouteModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>Traceroute Result - <span id="tracerouteHostName"></span></h3>
+                <button class="modal-close" id="closeTracerouteBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="terminal-container">
+                    <pre class="terminal-output" id="tracerouteOutput">Initializing traceroute...</pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="closeTracerouteModalBtn">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ping Modal -->
+    <div class="modal-overlay" id="pingModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>Ping Result - <span id="pingHostName"></span></h3>
+                <button class="modal-close" id="closePingBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="terminal-container">
+                    <pre class="terminal-output" id="pingOutput">Initializing ping...</pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="closePingModalBtn">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Host Modal -->
+    <div class="modal-overlay" id="editHostModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Edit Host</h3>
+                <button class="modal-close" id="closeEditHostModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editHostId">
+                <div class="form-group">
+                    <label for="editHostInput">IP Address / Hostname</label>
+                    <input type="text" id="editHostInput" placeholder="contoh: 192.168.1.1">
+                </div>
+                <div class="form-group">
+                    <label for="editNameInput">Nama</label>
+                    <input type="text" id="editNameInput" placeholder="contoh: Router Utama">
+                </div>
+                <div class="form-group">
+                    <label for="editCidInput">CID (Customer ID)</label>
+                    <input type="text" id="editCidInput" placeholder="contoh: CID-12345">
+                </div>
+                <div class="form-group">
+                    <label for="editHostGroupSelect">Grup</label>
+                    <select id="editHostGroupSelect">
+                        <option value="">-- Tidak Ada Grup --</option>
+                    </select>
+                </div>
+
+                <!-- SNMP Configuration -->
+                <div class="form-section-title" style="margin-top: 20px;">SNMP Configuration</div>
+                <div class="location-toggle">
+                    <label class="toggle-container">
+                        <input type="checkbox" id="editSnmpEnabled">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span>Enable SNMP Monitoring</span>
+                </div>
+
+                <div id="editSnmpFields" style="display: none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editSnmpCommunity">Community</label>
+                            <input type="text" id="editSnmpCommunity" value="public">
+                        </div>
+                        <div class="form-group">
+                            <label for="editSnmpVersion">Version</label>
+                            <select id="editSnmpVersion">
+                                <option value="1">v1</option>
+                                <option value="2c" selected>v2c</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editSnmpInterface">Interface Monitoring</label>
+                        <div class="input-with-button">
+                            <select id="editSnmpInterface" style="flex: 1;">
+                                <option value="">-- Select Interface --</option>
+                            </select>
+                            <button class="btn btn-secondary btn-sm" id="btnScanInterfaces" type="button"
+                                style="margin-left: 8px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                </svg>
+                                Scan
+                            </button>
+                        </div>
+                        <small class="form-hint" id="scanStatusText">Click Scan to list interfaces</small>
+                        <input type="hidden" id="editSnmpInterfaceName">
+                    </div>
+                </div>
+
+                <!-- Location Settings -->
+                <div class="form-section-title">Lokasi Host</div>
+                <div class="location-picker-container">
+                    <p class="location-help">Cari lokasi atau klik pada peta.</p>
+
+                    <div class="address-search">
+                        <div class="address-search-input">
+                            <input type="text" id="editAddressSearchInput" placeholder="Cari alamat...">
+                            <button class="btn btn-primary btn-sm" id="editSearchAddressBtn">Cari</button>
+                        </div>
+                        <div class="address-search-results" id="editAddressSearchResults"></div>
+                    </div>
+
+                    <div id="editLocationPickerMap" class="location-picker-map"
+                        style="height: 300px; margin-bottom: 12px; border-radius: 8px;"></div>
+
+                    <div class="form-group">
+                        <label for="editCoordinatesInput">Koordinat (Latitude, Longitude)</label>
+                        <input type="text" id="editCoordinatesInput" placeholder="Contoh: -6.200000, 106.816666">
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" id="cancelEditHostModalBtn">Batal</button>
+                <button class="btn btn-primary" id="saveEditHostBtn">Simpan Perubahan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>Riwayat Ping - <span id="historyHostName"></span></h3>
+                <button class="modal-close" id="closeHistoryBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="history-chart" id="historyChart"></div>
+                <div class="history-list" id="historyList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div class="modal-overlay" id="editProfileModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Edit Profile</h3>
+                <button class="modal-close" id="closeEditProfileBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="profileUsernameInput">Username</label>
+                    <input type="text" id="profileUsernameInput" placeholder="Username">
+                </div>
+                <div class="form-group">
+                    <label for="profileNameInput">Nama</label>
+                    <input type="text" id="profileNameInput" placeholder="Nama lengkap">
+                </div>
+                <div class="form-group">
+                    <label for="profilePasswordInput">Password Baru</label>
+                    <input type="password" id="profilePasswordInput" placeholder="Kosongkan jika tidak ingin mengubah">
+                    <div
+                        style="margin-top: 8px; font-size: 0.8rem; color: var(--text-secondary); background: var(--bg-tertiary); padding: 8px; border-radius: 4px;">
+                        <strong>Syarat:</strong> Min 8 chars, 1 Huruf Besar, 1 Huruf Kecil, 1 Angka, 1 Simbol.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" id="cancelEditProfileBtn">Batal</button>
+                <button class="btn btn-primary" id="saveProfileBtn">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal (Forced) -->
+    <div class="modal-overlay" id="changePasswordModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>🔒 Ganti Password</h3>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning"
+                    style="margin-bottom: 16px; padding: 12px; background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px;">
+                    <strong>Perhatian:</strong> Anda harus mengganti password sebelum melanjutkan.
+                </div>
+
+                <div class="password-requirements"
+                    style="margin-bottom: 16px; padding: 12px; background: var(--bg-tertiary); border-radius: 8px; font-size: 0.85rem;">
+                    <strong>Syarat Password:</strong>
+                    <ul style="margin: 8px 0 0 16px; padding: 0;">
+                        <li>Minimal 8 karakter</li>
+                        <li>Minimal 1 huruf besar (A-Z)</li>
+                        <li>Minimal 1 huruf kecil (a-z)</li>
+                        <li>Minimal 1 angka (0-9)</li>
+                        <li>Minimal 1 simbol (!@#$%^&* dll)</li>
+                    </ul>
+                </div>
+
+                <div class="form-group">
+                    <label for="newPasswordInput">Password Baru</label>
+                    <input type="password" id="newPasswordInput" placeholder="Masukkan password baru">
+                </div>
+                <div class="form-group">
+                    <label for="confirmPasswordInput">Konfirmasi Password</label>
+                    <input type="password" id="confirmPasswordInput" placeholder="Ulangi password baru">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="saveNewPasswordBtn">Simpan Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Location Modal -->
+    <div class="modal-overlay" id="locationModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Update Lokasi Host - <span id="locationHostName"></span></h3>
+                <button class="modal-close" id="closeLocationBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="location-help">Cari lokasi atau klik pada peta untuk memperbarui koordinat.</p>
+
+                <div class="address-search">
+                    <div class="address-search-input">
+                        <input type="text" id="addressSearchInput" placeholder="Cari alamat...">
+                        <button class="btn btn-primary btn-sm" id="searchAddressBtn">Cari</button>
+                    </div>
+                    <div class="address-search-results" id="addressSearchResults"></div>
+                </div>
+
+                <div id="locationPickerMap" class="location-picker-map"
+                    style="height: 300px; margin-bottom: 12px; border-radius: 8px;"></div>
+
+                <div class="form-group">
+                    <label for="coordinatesInput">Koordinat (Latitude, Longitude)</label>
+                    <input type="text" id="coordinatesInput" placeholder="Contoh: -6.200000, 106.816666">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" id="cancelLocationBtn">Batal</button>
+                <button class="btn btn-primary" id="saveLocationBtn">Simpan Lokasi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- API & Webhooks Management Modal (Admin Only) -->
+    <div class="modal-overlay" id="apiWebhooksModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>🔌 API & Webhooks</h3>
+                <button class="modal-close" id="closeApiWebhooksModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Tabs -->
+                <div class="modal-tabs">
+                    <button class="modal-tab active" data-tab="apiKeysTab">🔑 API Keys</button>
+                    <button class="modal-tab" data-tab="webhooksTab">🔗 Webhooks</button>
+                    <button class="modal-tab" data-tab="telegramTab">📱 Telegram</button>
+                </div>
+
+                <!-- API Keys Tab -->
+                <div class="modal-tab-content active" id="apiKeysTab">
+                    <div class="api-section">
+                        <div class="api-header">
+                            <h4>API Keys</h4>
+                            <button class="btn btn-primary btn-sm" id="createApiKeyBtn">+ Buat Key</button>
+                        </div>
+                        <p class="api-description">Gunakan X-API-Key header untuk akses /api/v1/*</p>
+                        <div class="api-keys-list" id="apiKeysList"></div>
+                    </div>
+
+                    <!-- Create API Key Form -->
+                    <div class="api-form" id="createApiKeyForm" style="display: none;">
+                        <h4>Buat API Key Baru</h4>
+                        <div class="form-group">
+                            <label for="apiKeyName">Nama Key</label>
+                            <input type="text" id="apiKeyName" placeholder="Contoh: Grafana Integration">
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-ghost" id="cancelCreateApiKeyBtn">Batal</button>
+                            <button class="btn btn-primary" id="submitCreateApiKeyBtn">Buat</button>
+                        </div>
+                    </div>
+
+                    <!-- Show New Key -->
+                    <div class="api-new-key" id="newKeyDisplay" style="display: none;">
+                        <div class="alert alert-warning"
+                            style="margin-bottom:12px;padding:12px;background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);border-radius:8px;">
+                            <strong>⚠️ Simpan key ini!</strong> Tidak bisa dilihat lagi.
+                        </div>
+                        <div class="key-display" style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+                            <code id="newKeyValue"
+                                style="flex:1;padding:8px;background:var(--bg-tertiary);border-radius:4px;font-size:0.75rem;word-break:break-all;"></code>
+                            <button class="btn btn-sm btn-ghost" id="copyNewKeyBtn" title="Copy">📋</button>
+                        </div>
+                        <button class="btn btn-primary" id="closeNewKeyDisplayBtn">Selesai</button>
+                    </div>
+                </div>
+
+                <!-- Webhooks Tab -->
+                <div class="modal-tab-content" id="webhooksTab" style="display:none;">
+                    <div class="api-section">
+                        <div class="api-header">
+                            <h4>Webhooks</h4>
+                            <button class="btn btn-primary btn-sm" id="createWebhookBtn">+ Tambah</button>
+                        </div>
+                        <p class="api-description">HTTP POST saat host down/up dengan HMAC signature</p>
+                        <div class="webhooks-list" id="webhooksList"></div>
+                    </div>
+
+                    <!-- Create Webhook Form -->
+                    <div class="api-form" id="createWebhookForm" style="display: none;">
+                        <h4>Tambah Webhook</h4>
+                        <div class="form-group">
+                            <label for="webhookName">Nama</label>
+                            <input type="text" id="webhookName" placeholder="Slack Alerts">
+                        </div>
+                        <div class="form-group">
+                            <label for="webhookUrl">URL</label>
+                            <input type="url" id="webhookUrl" placeholder="https://example.com/webhook">
+                        </div>
+                        <div class="form-group">
+                            <label for="webhookSecret">Secret (opsional)</label>
+                            <input type="text" id="webhookSecret" placeholder="HMAC secret">
+                        </div>
+                        <div class="form-group">
+                            <label>Events</label>
+                            <div class="checkbox-group" style="display:flex;gap:16px;">
+                                <label><input type="checkbox" id="webhookEventDown" checked> host_down</label>
+                                <label><input type="checkbox" id="webhookEventUp" checked> host_up</label>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-ghost" id="cancelCreateWebhookBtn">Batal</button>
+                            <button class="btn btn-primary" id="submitCreateWebhookBtn">Simpan</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Telegram Tab -->
+                <div class="modal-tab-content" id="telegramTab" style="display:none;">
+                    <div class="api-section">
+                        <div class="api-header">
+                            <h4>Notifikasi Telegram</h4>
+                        </div>
+                        <p class="api-description">Dapatkan notifikasi saat host down/up melalui Telegram.</p>
+
+                        <div class="form-group">
+                            <label for="tgBotToken">Bot Token</label>
+                            <input type="text" id="tgBotToken" placeholder="123456789:ABCdefGhIJKlmNoPQRsTuvWxYz">
+                            <small>Dapatkan dari @BotFather</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tgChatId">Chat ID</label>
+                            <input type="text" id="tgChatId" placeholder="123456789">
+                            <small>ID chat pribadi atau grup</small>
+                        </div>
+
+                        <div class="form-actions" style="margin-top: 16px;">
+                            <button class="btn btn-secondary btn-sm" id="testTelegramBtn2">📨 Test
+                                Kirim</button>
+                            <button class="btn btn-primary" id="saveTelegramBtn2">💾 Simpan</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Traffic Graph Modal -->
+    <div class="modal-overlay" id="trafficModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>Traffic Monitor - <span id="trafficHostName"></span></h3>
+                <button class="modal-close" id="closeTrafficModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="traffic-stats-row">
+                    <div class="traffic-stat">
+                        <span class="label">Inbound:</span>
+                        <span class="value in" id="trafficInValue">0 bps</span>
+                    </div>
+                    <div class="traffic-stat">
+                        <span class="label">Outbound:</span>
+                        <span class="value out" id="trafficOutValue">0 bps</span>
+                    </div>
+                </div>
+                <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="trafficChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart.js (local for reliability) -->
+    <script src="chart.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet MarkerCluster JS -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="app.js?v=2.7"></script>
+</body>
+
+</html>
