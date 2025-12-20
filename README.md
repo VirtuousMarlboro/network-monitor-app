@@ -67,7 +67,7 @@ Aplikasi monitoring jaringan enterprise-grade berbasis web untuk memantau konekt
 
    **Login Default:**
    - Username: `admin`
-   - Password: `password` (Segera ganti password setelah login!)
+   - Password: `ChangeThisStrongPassword123!` (Segera ganti password setelah login!)
 
 ## 📁 Struktur Project
 
