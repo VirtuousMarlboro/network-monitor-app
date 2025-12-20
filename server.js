@@ -18,8 +18,6 @@ const { wafMiddleware, getWafStats } = require('./services/wafService');
 const webpush = require('web-push');
 const snmpService = require('./services/snmpService');
 const databaseService = require('./services/databaseService');
-const { cacheService, CACHE_KEYS, TTL } = require('./services/cacheService');
-const { createLoggingMiddleware } = require('./middleware/logging');
 
 // ========================================
 // Modular Routes & Middleware (Phase 3 Refactoring)
@@ -313,12 +311,6 @@ app.use(session({
     }
 }));
 
-// ========================================
-// SECURITY: Request Logging Middleware
-// ========================================
-app.use(createLoggingMiddleware(databaseService));
-console.log('📝 Request logging enabled');
-
 // Store monitored hosts in memory (loaded from file on startup)
 let monitoredHosts = [];
 let pingHistory = {};
@@ -484,28 +476,18 @@ function loadData() {
     }
 }
 
-function saveHosts(hostToUpdate = null) {
+function saveHosts() {
     try {
-        if (hostToUpdate) {
-            // Incremental update: save only the specific host to SQLite
-            const existing = databaseService.getHostById(hostToUpdate.id);
+        // Save to SQLite (sync memory state to DB)
+        for (const host of monitoredHosts) {
+            const existing = databaseService.getHostById(host.id);
             if (existing) {
-                databaseService.updateHost(hostToUpdate.id, hostToUpdate);
+                databaseService.updateHost(host.id, host);
             } else {
-                databaseService.createHost(hostToUpdate);
-            }
-        } else {
-            // Full sync: save all hosts to SQLite (fallback)
-            for (const host of monitoredHosts) {
-                const existing = databaseService.getHostById(host.id);
-                if (existing) {
-                    databaseService.updateHost(host.id, host);
-                } else {
-                    databaseService.createHost(host);
-                }
+                databaseService.createHost(host);
             }
         }
-        // Always save to JSON as backup (until full migration)
+        // Also save to JSON as backup
         fs.writeFileSync(HOSTS_FILE, JSON.stringify(monitoredHosts, null, 2));
     } catch (error) {
         console.error('Error saving hosts:', error);
@@ -995,8 +977,7 @@ const hostRoutes = createHostRoutes({
     getUsers: () => users,
     addAuditLog,
     broadcastSSE,
-    middleware: authMiddleware,
-    databaseService
+    middleware: authMiddleware
 });
 app.use('/api/hosts', hostRoutes);  // /api/hosts/*
 

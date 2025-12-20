@@ -21,7 +21,7 @@ function createHostRoutes(deps) {
     const router = express.Router();
     const {
         getHosts, getPingHistory, saveHosts, isValidHost,
-        getUsers, addAuditLog, broadcastSSE, middleware, databaseService
+        getUsers, addAuditLog, broadcastSSE, middleware
     } = deps;
 
     // GET /api/hosts - Get all monitored hosts
@@ -85,7 +85,7 @@ function createHostRoutes(deps) {
         hosts.push(newHost);
         const pingHistory = getPingHistory();
         pingHistory[newHost.id] = [];
-        saveHosts(newHost);
+        saveHosts();
 
         // Audit log for host creation
         const users = getUsers();
@@ -145,7 +145,7 @@ function createHostRoutes(deps) {
         if (snmpInterface !== undefined) hostData.snmpInterface = snmpInterface;
         if (snmpInterfaceName !== undefined) hostData.snmpInterfaceName = snmpInterfaceName;
 
-        saveHosts(hostData);
+        saveHosts();
 
         // Audit log for host edit
         const users = getUsers();
@@ -169,7 +169,7 @@ function createHostRoutes(deps) {
 
         hostData.latitude = latitude;
         hostData.longitude = longitude;
-        saveHosts(hostData);
+        saveHosts();
 
         broadcastSSE('hosts-update', hosts);
         res.json(hostData);
@@ -188,13 +188,7 @@ function createHostRoutes(deps) {
         const deleted = hosts.splice(index, 1)[0];
         const pingHistory = getPingHistory();
         delete pingHistory[id];
-        // For deletion, we need to explicitly delete from DB or do full sync
-        // Using databaseService directly for deletion would be better
-        databaseService.deleteHost(id);
-        saveHosts(); // Full sync for JSON file needed, but DB is handled by explicit delete above? 
-        // Actually saveHosts() without args does full sync which handles deletion if we removed it from array?
-        // Wait, full sync loop iterates array. If removed from array, it won't update DB to delete it.
-        // So we MUST call databaseService.deleteHost(id) here regardless.
+        saveHosts();
 
         // Audit log for host deletion
         const users = getUsers();

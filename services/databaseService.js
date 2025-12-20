@@ -6,7 +6,6 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
-const { cacheService, CACHE_KEYS, TTL } = require('./cacheService');
 
 // Constants
 const DATA_DIR = path.join(__dirname, '..', 'data');
@@ -323,39 +322,6 @@ function getTrafficHistory(hostId, limit = 500) {
     } catch (err) {
         console.error('Error getting traffic history:', err.message);
         return [];
-    }
-}
-
-/**
- * Get traffic history with pagination (offset-based)
- * @param {string} hostId - Host ID
- * @param {number} limit - Number of records per page
- * @param {number} offset - Number of records to skip
- * @returns {Object} { data: [], total: number, hasMore: boolean }
- */
-function getTrafficHistoryPaginated(hostId, limit = 100, offset = 0) {
-    try {
-        const countStmt = db.prepare('SELECT COUNT(*) as total FROM traffic_history WHERE host_id = ?');
-        const { total } = countStmt.get(hostId);
-
-        const dataStmt = db.prepare(`
-            SELECT * FROM traffic_history 
-            WHERE host_id = ? 
-            ORDER BY timestamp DESC 
-            LIMIT ? OFFSET ?
-        `);
-        const rows = dataStmt.all(hostId, limit, offset);
-
-        return {
-            data: rows.reverse(), // Chronological order
-            total,
-            hasMore: offset + limit < total,
-            page: Math.floor(offset / limit) + 1,
-            totalPages: Math.ceil(total / limit)
-        };
-    } catch (err) {
-        console.error('Error getting paginated traffic history:', err.message);
-        return { data: [], total: 0, hasMore: false, page: 1, totalPages: 0 };
     }
 }
 
@@ -718,21 +684,8 @@ function deleteTicketComment(commentId) {
 // Settings Operations (Key-Value)
 // ========================================
 function getSetting(key) {
-    // Check cache first for common settings
-    if (key === 'telegram' || key === 'ticketCounters') {
-        const cached = cacheService.get(CACHE_KEYS.SETTINGS + '_' + key);
-        if (cached) return cached;
-    }
-
     const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
-    const value = row ? JSON.parse(row.value) : null;
-
-    // Cache the result
-    if (key === 'telegram' || key === 'ticketCounters') {
-        cacheService.set(CACHE_KEYS.SETTINGS + '_' + key, value, TTL.LONG);
-    }
-
-    return value;
+    return row ? JSON.parse(row.value) : null;
 }
 
 function setSetting(key, value) {
@@ -740,11 +693,6 @@ function setSetting(key, value) {
         INSERT OR REPLACE INTO settings (key, value, updated_at)
         VALUES (?, ?, ?)
     `).run(key, JSON.stringify(value), Date.now());
-
-    // Update cache
-    if (key === 'telegram' || key === 'ticketCounters') {
-        cacheService.set(CACHE_KEYS.SETTINGS + '_' + key, value, TTL.LONG);
-    }
 }
 
 function getAllSettings() {
@@ -916,7 +864,6 @@ module.exports = {
     // Traffic
     storeTrafficEntry,
     getTrafficHistory,
-    getTrafficHistoryPaginated,
     getLastTrafficEntry,
     cleanupTrafficHistory,
     // Logs
