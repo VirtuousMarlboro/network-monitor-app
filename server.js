@@ -1284,41 +1284,7 @@ function sendTelegramNotification(message) {
 
 // ... (other code) ...
 
-// Start auto ping (Recursive setTimeout pattern)
-function startAutoPing() {
-    if (autoPingInterval) {
-        clearTimeout(autoPingInterval); // Clear any existing timeout
-    }
-
-    // Initial call
-    const runPingLoop = async () => {
-        if (!autoPingEnabled) return;
-
-        try {
-            await autoPingAllHosts();
-        } catch (err) {
-            console.error('Error in auto-ping loop:', err);
-        }
-
-        // Schedule next run only after current one finishes
-        if (autoPingEnabled) {
-            autoPingInterval = setTimeout(runPingLoop, PROBE_INTERVAL);
-        }
-    };
-
-    runPingLoop();
-    console.log(`ðŸ”„ Auto-ping started (every ${PROBE_INTERVAL / 1000} seconds, ${PROBE_DOWN_COUNT} failures to mark offline)`);
-}
-
-// Stop auto ping
-function stopAutoPing() {
-    if (autoPingInterval) {
-        clearTimeout(autoPingInterval); // Change clearInterval to clearTimeout
-        autoPingInterval = null;
-    }
-    console.log('â¹ï¸ Auto-ping stopped');
-}
-
+// NOTE: startAutoPing and stopAutoPing functions are defined below autoPingAllHosts()
 // Send SSE event to all connected clients
 function broadcastSSE(event, data) {
     const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -1382,10 +1348,12 @@ function processTrafficData(hostId, data) {
 async function autoPingAllHosts() {
     if (monitoredHosts.length === 0) return;
 
+    const startTime = Date.now();
+    console.log(`[AUTO-PING] Starting ping cycle for ${monitoredHosts.length} hosts...`);
     const alerts = [];
 
     for (const hostData of monitoredHosts) {
-        const previousStatus = hostData.status;
+        const previousStatus = hostData.status || 'unknown'; // Handle undefined status
         const result = await pingHost(hostData.host);
 
         // Initialize failure counter if not exists
@@ -1407,8 +1375,13 @@ async function autoPingAllHosts() {
         } else if (hostFailureCount[hostData.id] >= PROBE_DOWN_COUNT) {
             newStatus = 'offline';
         } else {
-            // Keep previous status during failure accumulation
+            // Keep previous status during failure accumulation (default to online if unknown)
             newStatus = previousStatus === 'offline' ? 'offline' : 'online';
+        }
+
+        // Log status change
+        if (previousStatus !== newStatus) {
+            console.log(`[STATUS] ${hostData.name}: ${previousStatus} -> ${newStatus} (failCount: ${hostFailureCount[hostData.id]})`);
         }
 
         hostData.status = newStatus;
@@ -1509,7 +1482,20 @@ async function autoPingAllHosts() {
             if (!hostDownSince[hostData.id]) {
                 hostDownSince[hostData.id] = Date.now();
                 hostTicketCreated[hostData.id] = false;
-                console.log(`[AUTO-TICKET] Started tracking downtime for ${hostData.name} (first detected offline)`);
+
+                // Check if there's already an open/pending/in_progress ticket for this host
+                // This prevents duplicate tickets after server restart
+                const existingTicket = tickets.find(t =>
+                    t.hostId === hostData.id &&
+                    t.source === 'auto' &&
+                    ['open', 'pending', 'in_progress'].includes(t.status)
+                );
+                if (existingTicket) {
+                    hostTicketCreated[hostData.id] = true; // Mark as already handled
+                    console.log(`[AUTO-TICKET] Host ${hostData.name} already has open ticket ${existingTicket.ticketId} - skipping`);
+                } else {
+                    console.log(`[AUTO-TICKET] Started tracking downtime for ${hostData.name} (first detected offline)`);
+                }
             }
 
             // Check if ticket should be created after 2 minutes
@@ -1522,21 +1508,32 @@ async function autoPingAllHosts() {
                         console.log(`[AUTO-TICKET] Host ${hostData.name} is in maintenance - skipping`);
                         hostTicketCreated[hostData.id] = true; // Mark as "handled" to avoid repeated checks
                     } else {
-                        // Host has been down for 2 minutes, create ticket now
-                        console.log(`[AUTO-TICKET] Host ${hostData.name} still down after 2 minutes - creating ticket`);
-                        createTicket(
-                            hostData.id,
-                            hostData.name,
-                            hostData.cid,
-                            `Host Down - ${hostData.name}`, // Title
-                            `Host ${hostData.name} (${hostData.host}) has been offline for more than 2 minutes. Auto-ticket created.`, // Description
-                            'auto', // Source
-                            'high' // Priority
+                        // Double-check for existing ticket (race condition protection)
+                        const existingTicketCheck = tickets.find(t =>
+                            t.hostId === hostData.id &&
+                            t.source === 'auto' &&
+                            ['open', 'pending', 'in_progress'].includes(t.status)
                         );
-                        hostTicketCreated[hostData.id] = true;
+                        if (existingTicketCheck) {
+                            console.log(`[AUTO-TICKET] Host ${hostData.name} already has ticket ${existingTicketCheck.ticketId} - skipping creation`);
+                            hostTicketCreated[hostData.id] = true;
+                        } else {
+                            // Host has been down for 2 minutes, create ticket now
+                            console.log(`[AUTO-TICKET] Host ${hostData.name} still down after 2 minutes - creating ticket`);
+                            createTicket(
+                                hostData.id,
+                                hostData.name,
+                                hostData.cid,
+                                `Host Down - ${hostData.name}`, // Title
+                                `Host ${hostData.name} (${hostData.host}) has been offline for more than 2 minutes. Auto-ticket created.`, // Description
+                                'auto', // Source
+                                'high' // Priority
+                            );
+                            hostTicketCreated[hostData.id] = true;
 
-                        // Send additional Telegram notification about ticket creation
-                        await sendTelegramNotification(`[TICKET] Tiket Otomatis Dibuat\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nAlasan: Host down lebih dari 2 menit`);
+                            // Send additional Telegram notification about ticket creation
+                            await sendTelegramNotification(`[TICKET] Tiket Otomatis Dibuat\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nAlasan: Host down lebih dari 2 menit`);
+                        }
                     }
                 }
             }
@@ -1606,6 +1603,10 @@ async function autoPingAllHosts() {
     if (alerts.length > 0) {
         broadcastSSE('alerts', alerts);
     }
+
+    // Log completion
+    const duration = Date.now() - startTime;
+    console.log(`[AUTO-PING] Ping cycle completed in ${duration}ms. Broadcast to ${sseClients.length} clients.`);
 
     // SQLite handles traffic persistence automatically via databaseService
     // saveSnmpTraffic(); // DEPRECATED
