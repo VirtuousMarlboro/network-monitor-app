@@ -4785,11 +4785,25 @@ function openManageGroupsModal() {
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Buat Grup Baru</label>
-                        <div class="input-group">
-                            <input type="text" id="newGroupNameInput" placeholder="Nama grup...">
-                            <input type="color" id="newGroupColorInput" value="#6366f1" title="Pilih warna">
+                        <div class="input-group" style="flex-wrap: wrap; gap: 12px;">
+                            <input type="text" id="newGroupNameInput" placeholder="Nama grup..." style="flex: 1; min-width: 200px;">
                             <button class="btn btn-primary btn-sm" id="createGroupBtn">Tambah</button>
                         </div>
+                        <div class="color-swatches" id="colorSwatches" style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+                            <div class="color-swatch selected" data-color="#7c3aed" style="background: #7c3aed;" title="Purple"></div>
+                            <div class="color-swatch" data-color="#3b82f6" style="background: #3b82f6;" title="Blue"></div>
+                            <div class="color-swatch" data-color="#10b981" style="background: #10b981;" title="Green"></div>
+                            <div class="color-swatch" data-color="#f59e0b" style="background: #f59e0b;" title="Orange"></div>
+                            <div class="color-swatch" data-color="#ef4444" style="background: #ef4444;" title="Red"></div>
+                            <div class="color-swatch" data-color="#ec4899" style="background: #ec4899;" title="Pink"></div>
+                            <div class="color-swatch" data-color="#14b8a6" style="background: #14b8a6;" title="Teal"></div>
+                            <div class="color-swatch" data-color="#8b5cf6" style="background: #8b5cf6;" title="Violet"></div>
+                            <div class="color-swatch" data-color="#06b6d4" style="background: #06b6d4;" title="Cyan"></div>
+                            <div class="color-swatch" data-color="#84cc16" style="background: #84cc16;" title="Lime"></div>
+                            <div class="color-swatch" data-color="#f97316" style="background: #f97316;" title="Dark Orange"></div>
+                            <div class="color-swatch" data-color="#6366f1" style="background: #6366f1;" title="Indigo"></div>
+                        </div>
+                        <input type="hidden" id="newGroupColorInput" value="#7c3aed">
                     </div>
                     <div class="groups-list" id="groupsListContainer">
                         <p class="text-muted">Memuat grup...</p>
@@ -4801,6 +4815,15 @@ function openManageGroupsModal() {
             </div>
         `;
         document.body.appendChild(modal);
+
+        // Color swatch click handler
+        modal.querySelectorAll('.color-swatch').forEach(swatch => {
+            swatch.onclick = () => {
+                modal.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+                swatch.classList.add('selected');
+                modal.querySelector('#newGroupColorInput').value = swatch.dataset.color;
+            };
+        });
 
         // Add event listeners
         modal.querySelector('#closeManageGroupsBtn').onclick = () => modal.classList.remove('show');

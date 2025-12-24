@@ -1,56 +1,66 @@
 /* ========================================
-   Network Monitor - Modern Dark Theme
+   Network Monitor - Modern Glassmorphism Theme
    ======================================== */
 
 :root {
-    /* Colors */
-    --bg-primary: #0a0a0f;
-    --bg-secondary: #12121a;
-    --bg-tertiary: #1a1a25;
-    --bg-card: #16161f;
-    --bg-card-hover: #1e1e2a;
+    /* Colors - Modern Dark with Purple-Blue Accent */
+    --bg-primary: #0a0a12;
+    --bg-secondary: #0f0f1a;
+    --bg-tertiary: #141420;
+    --bg-card: rgba(20, 20, 35, 0.8);
+    --bg-card-hover: rgba(30, 30, 50, 0.9);
+    --bg-glass: rgba(255, 255, 255, 0.03);
 
     --text-primary: #ffffff;
-    --text-secondary: #a0a0b0;
-    --text-muted: #6b6b7b;
+    --text-secondary: #a8a8c0;
+    --text-muted: #6b6b85;
 
-    --accent-primary: #6366f1;
-    --accent-secondary: #818cf8;
-    --accent-glow: rgba(99, 102, 241, 0.3);
+    /* Gradient Accent */
+    --accent-primary: #7c3aed;
+    --accent-secondary: #3b82f6;
+    --accent-gradient: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+    --accent-glow: rgba(124, 58, 237, 0.4);
 
     --success: #10b981;
-    --success-bg: rgba(16, 185, 129, 0.1);
-    --success-glow: rgba(16, 185, 129, 0.3);
+    --success-bg: rgba(16, 185, 129, 0.15);
+    --success-glow: rgba(16, 185, 129, 0.4);
 
     --danger: #ef4444;
-    --danger-bg: rgba(239, 68, 68, 0.1);
-    --danger-glow: rgba(239, 68, 68, 0.3);
+    --danger-bg: rgba(239, 68, 68, 0.15);
+    --danger-glow: rgba(239, 68, 68, 0.4);
 
     --warning: #f59e0b;
-    --warning-bg: rgba(245, 158, 11, 0.1);
+    --warning-bg: rgba(245, 158, 11, 0.15);
 
     --info: #3b82f6;
-    --info-bg: rgba(59, 130, 246, 0.1);
+    --info-bg: rgba(59, 130, 246, 0.15);
 
-    /* Borders */
-    --border-color: rgba(255, 255, 255, 0.08);
-    --border-color-hover: rgba(255, 255, 255, 0.15);
+    /* Glassmorphism Borders */
+    --border-color: rgba(255, 255, 255, 0.06);
+    --border-color-hover: rgba(255, 255, 255, 0.12);
+    --border-glass: 1px solid rgba(255, 255, 255, 0.08);
 
-    /* Shadows */
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+    /* Enhanced Shadows */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 8px 48px rgba(0, 0, 0, 0.6);
+    --shadow-glow: 0 0 40px rgba(124, 58, 237, 0.15);
 
     /* Transitions */
-    --transition-fast: 0.15s ease;
-    --transition-normal: 0.25s ease;
-    --transition-slow: 0.4s ease;
+    --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
-    /* Border Radius */
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    --radius-xl: 24px;
+    /* Border Radius - More Rounded */
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+
+    /* Blur for Glassmorphism */
+    --blur-sm: blur(8px);
+    --blur-md: blur(16px);
+    --blur-lg: blur(24px);
 }
 
 [data-theme="light"] {
@@ -132,9 +142,9 @@ body::before {
     width: 100%;
     height: 100%;
     background:
-        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent),
-        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(16, 185, 129, 0.08), transparent),
-        radial-gradient(ellipse 60% 40% at 20% 100%, rgba(239, 68, 68, 0.05), transparent);
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 58, 237, 0.2), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(59, 130, 246, 0.1), transparent),
+        radial-gradient(ellipse 60% 40% at 20% 100%, rgba(16, 185, 129, 0.08), transparent);
     pointer-events: none;
     z-index: -1;
     /* Hardware acceleration for better mobile support */
@@ -341,6 +351,8 @@ body::before {
 
 .stat-card {
     background: var(--bg-card);
+    backdrop-filter: var(--blur-sm);
+    -webkit-backdrop-filter: var(--blur-sm);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     padding: 24px;
@@ -349,18 +361,29 @@ body::before {
     gap: 16px;
     transition: all var(--transition-normal);
     cursor: pointer;
-    border: 1px solid var(--border-color);
-    /* Explicit border for active state to override */
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
 }
 
 .stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
+    border-color: var(--border-color-hover);
 }
 
 .stat-card.active {
     border-color: var(--accent-primary);
-    box-shadow: 0 0 0 2px var(--accent-glow);
+    box-shadow: 0 0 0 2px var(--accent-glow), var(--shadow-glow);
 }
 
 .stat-card.online .stat-icon {
@@ -587,6 +610,8 @@ body::before {
 /* Host Card */
 .host-card {
     background: var(--bg-card);
+    backdrop-filter: var(--blur-sm);
+    -webkit-backdrop-filter: var(--blur-sm);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     padding: 24px;
@@ -617,8 +642,8 @@ body::before {
 }
 
 .host-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-6px) scale(1.01);
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
     border-color: var(--border-color-hover);
 }
 
@@ -1071,6 +1096,49 @@ body::before {
 
 .history-item:last-child {
     margin-bottom: 0;
+}
+
+/* ========================================
+   Color Swatch Picker (Modern)
+   ======================================== */
+.color-swatches {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 0;
+}
+
+.color-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: 2px solid transparent;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.color-swatch:hover {
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.color-swatch.selected {
+    border-color: var(--text-primary);
+    transform: scale(1.1);
+}
+
+.color-swatch.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .history-time {
