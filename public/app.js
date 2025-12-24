@@ -596,6 +596,24 @@ function connectSSE() {
         console.log('Host removed:', JSON.parse(e.data));
     });
 
+    // Realtime log updates (status changes)
+    eventSource.addEventListener('log-update', (e) => {
+        const logEntry = JSON.parse(e.data);
+        console.log('📋 Log update received:', logEntry);
+
+        // Add to cached logs if we have them
+        if (typeof statusLogs !== 'undefined') {
+            statusLogs = statusLogs || [];
+            statusLogs.unshift(logEntry);
+            if (statusLogs.length > 1000) statusLogs.pop();
+        }
+
+        // Re-render logs if on logs tab
+        if (!elements.logsSection?.classList.contains('hidden')) {
+            loadAndRenderLogs();
+        }
+    });
+
     eventSource.onerror = (e) => {
         console.error('SSE connection error:', e);
         showNotification('Koneksi terputus, mencoba menghubungkan ulang...', 'warning');

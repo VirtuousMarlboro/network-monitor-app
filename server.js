@@ -1492,6 +1492,9 @@ async function autoPingAllHosts() {
             if (statusLogs.length > MAX_LOGS) statusLogs.pop();
             saveLogs(); // Persist to file
 
+            // Broadcast log update immediately for realtime UI update
+            broadcastSSE('log-update', logEntry);
+
             // Track when host first went down
             hostDownSince[hostData.id] = Date.now();
             hostTicketCreated[hostData.id] = false;
@@ -1593,8 +1596,8 @@ async function autoPingAllHosts() {
             }
         }
 
-        // Check for status change - Host came back UP
-        if (previousStatus === 'offline' && newStatus === 'online') {
+        // Check for status change - Host came back UP (from offline or unknown)
+        if ((previousStatus === 'offline' || previousStatus === 'unknown') && newStatus === 'online') {
             const logEntry = {
                 id: `${Date.now()}-${hostData.id}`,
                 timestamp: result.timestamp,
@@ -1607,19 +1610,24 @@ async function autoPingAllHosts() {
             if (statusLogs.length > MAX_LOGS) statusLogs.pop();
             saveLogs(); // Persist to file
 
+            // Broadcast log update immediately for realtime UI update
+            broadcastSSE('log-update', logEntry);
+
             // Reset down tracking - host is back online
             const wasTicketCreated = hostTicketCreated[hostData.id];
             delete hostDownSince[hostData.id];
             delete hostTicketCreated[hostData.id];
 
-            if (!wasTicketCreated) {
-                console.log(`âœ… Host ${hostData.name} recovered before 2 minutes - no ticket created`);
+            if (previousStatus === 'offline' && !wasTicketCreated) {
+                console.log(`✅ Host ${hostData.name} recovered before 2 minutes - no ticket created`);
+            } else if (previousStatus === 'unknown') {
+                console.log(`✅ Host ${hostData.name} is now online (first successful ping)`);
             }
 
             // Send Telegram Notification (unless in maintenance)
             const maintenanceUp = isHostInMaintenance(hostData.id);
             if (maintenanceUp) {
-                console.log(`ðŸ”§ Host ${hostData.name} is in maintenance - suppressing up notification`);
+                console.log(`🔧 Host ${hostData.name} is in maintenance - suppressing up notification`);
             } else {
                 await sendTelegramNotification(`🟢 Host Online\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nLatency: ${result.time}ms`);
                 // Also send push notification with unique tag
