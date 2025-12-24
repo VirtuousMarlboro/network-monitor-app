@@ -2757,8 +2757,41 @@ function initMap() {
 
     networkMap.addLayer(markerCluster);
 
+    // Handle window resize (especially important for mobile orientation changes)
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        if (networkMap && !elements.mapSection.classList.contains('hidden')) {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                networkMap.invalidateSize();
+                fitMapToMarkers();
+            }, 200);
+        }
+    });
+
     // Add markers for cached hosts
     updateMapMarkers(cachedHosts);
+}
+
+/**
+ * Fit map view to show all markers properly (especially important for mobile)
+ */
+function fitMapToMarkers() {
+    if (!networkMap || !markerCluster) return;
+
+    // Get bounds from cluster layer
+    const bounds = markerCluster.getBounds();
+
+    if (bounds.isValid()) {
+        // Add padding for better visibility on mobile
+        networkMap.fitBounds(bounds, {
+            padding: [30, 30],
+            maxZoom: 10 // Don't zoom too close
+        });
+    } else {
+        // Fallback to default Indonesia view if no markers
+        networkMap.setView([-2.5, 118.0], 5);
+    }
 }
 
 function createMarkerIcon(status) {
@@ -2967,8 +3000,10 @@ function switchTab(tabName) {
             initMap();
             if (networkMap) {
                 networkMap.invalidateSize();
+                // Fit bounds to all markers for proper centering on mobile
+                fitMapToMarkers();
             }
-        }, 100);
+        }, 150);
     }
 
     // Load logs when switching to logs tab
