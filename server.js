@@ -1016,19 +1016,8 @@ const settingsRoutes = createSettingsRoutes({
 app.use('/api/settings', settingsRoutes);  // /api/settings, /api/settings/test-telegram
 app.use('/api', settingsRoutes);  // /api/waf/stats (nested in settingsRoutes)
 
-// Ping a single host
-async function pingHost(host) {
-    // SECURITY: Prevent Command Injection
-    if (!isValidHost(host)) {
-        return {
-            host: host,
-            alive: false,
-            time: null,
-            timestamp: new Date().toISOString(),
-            error: 'Invalid Hostname/IP'
-        };
-    }
-
+// Single ping attempt (internal function)
+async function singlePing(host) {
     try {
         const result = await ping.promise.probe(host, {
             timeout: PROBE_TIMEOUT,
@@ -1050,6 +1039,53 @@ async function pingHost(host) {
             error: error.message
         };
     }
+}
+
+// Enhanced ping with multiple attempts for reliability
+// Host is considered ONLINE if ANY attempt succeeds
+const PING_ATTEMPTS = 3;
+
+async function pingHost(host) {
+    // SECURITY: Prevent Command Injection
+    if (!isValidHost(host)) {
+        return {
+            host: host,
+            alive: false,
+            time: null,
+            timestamp: new Date().toISOString(),
+            error: 'Invalid Hostname/IP'
+        };
+    }
+
+    // Try up to PING_ATTEMPTS times - success on ANY attempt = online
+    let lastResult = null;
+    let bestLatency = null;
+
+    for (let attempt = 1; attempt <= PING_ATTEMPTS; attempt++) {
+        const result = await singlePing(host);
+        lastResult = result;
+
+        if (result.alive) {
+            // Success! Track best latency and return immediately
+            console.log(`[PING] ${host}: SUCCESS on attempt ${attempt}/${PING_ATTEMPTS} (${result.time}ms)`);
+            return result;
+        }
+
+        // Track latency even for failed attempts if we got a response
+        if (result.time !== null && (bestLatency === null || result.time < bestLatency)) {
+            bestLatency = result.time;
+        }
+    }
+
+    // All attempts failed
+    console.log(`[PING] ${host}: FAILED all ${PING_ATTEMPTS} attempts`);
+    return {
+        host: host,
+        alive: false,
+        time: bestLatency,
+        timestamp: new Date().toISOString(),
+        attempts: PING_ATTEMPTS
+    };
 }
 
 // Telegram Notification Queue Service with Rate Limiting
@@ -1287,10 +1323,32 @@ function sendTelegramNotification(message) {
 // NOTE: startAutoPing and stopAutoPing functions are defined below autoPingAllHosts()
 // Send SSE event to all connected clients
 function broadcastSSE(event, data) {
+    if (sseClients.length === 0) return;
+
     const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-    sseClients.forEach(client => {
-        client.write(message);
+    const deadClients = [];
+
+    sseClients.forEach((client, index) => {
+        try {
+            // Check if client is still writable
+            if (client.writable && !client.destroyed) {
+                client.write(message);
+            } else {
+                deadClients.push(index);
+            }
+        } catch (err) {
+            console.log(`[SSE] Error writing to client ${index}:`, err.message);
+            deadClients.push(index);
+        }
     });
+
+    // Remove dead clients (in reverse order to maintain indices)
+    if (deadClients.length > 0) {
+        deadClients.reverse().forEach(index => {
+            sseClients.splice(index, 1);
+        });
+        console.log(`[SSE] Removed ${deadClients.length} dead clients. Active: ${sseClients.length}`);
+    }
 }
 
 // Process SNMP Traffic Data - Now uses SQLite via databaseService
