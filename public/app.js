@@ -22,6 +22,8 @@ let currentUser = null;
 let cachedTickets = [];
 let currentTicketStatusFilter = '';
 let currentTicketSearchQuery = '';
+let currentTicketPage = 1;
+let ticketsPerPage = 10;
 let cachedUsers = []; // For PIC selection
 
 // Abort Controllers for streams
@@ -1101,6 +1103,19 @@ function renderTickets() {
     // Sort by createdAt (incident/incoming time) - newest first
     filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+    // Pagination calculations
+    const totalItems = filtered.length;
+    const totalPages = Math.ceil(totalItems / ticketsPerPage);
+
+    // Ensure current page is valid
+    if (currentTicketPage > totalPages) {
+        currentTicketPage = Math.max(1, totalPages);
+    }
+
+    const startIndex = (currentTicketPage - 1) * ticketsPerPage;
+    const endIndex = startIndex + ticketsPerPage;
+    const paginatedTickets = filtered.slice(startIndex, endIndex);
+
     if (filtered.length === 0) {
         elements.ticketsList.innerHTML = `
             <div class="tickets-empty">
@@ -1111,10 +1126,13 @@ function renderTickets() {
                 <p>Tidak ada tiket</p>
             </div>
         `;
+        // Hide pagination when no tickets
+        const paginationEl = document.getElementById('ticketsPagination');
+        if (paginationEl) paginationEl.style.display = 'none';
         return;
     }
 
-    elements.ticketsList.innerHTML = filtered.map(ticket => `
+    elements.ticketsList.innerHTML = paginatedTickets.map(ticket => `
         <div class="ticket-card ${ticket.status} priority-${ticket.priority}" data-id="${ticket.id}">
             <div class="ticket-header">
                 <span class="ticket-id">${escapeHtml(ticket.ticketId)}</span>
@@ -1158,10 +1176,102 @@ function renderTickets() {
         </div>
     `).join('');
 
+    // Render pagination controls
+    renderTicketsPagination(totalItems, totalPages);
 
     document.querySelectorAll('.ticket-card').forEach(card => {
         card.addEventListener('click', () => openEditTicketModal(card.dataset.id));
     });
+}
+
+/**
+ * Render pagination controls for tickets
+ */
+function renderTicketsPagination(totalItems, totalPages) {
+    let paginationEl = document.getElementById('ticketsPagination');
+
+    if (!paginationEl) {
+        // Create pagination element if it doesn't exist
+        paginationEl = document.createElement('div');
+        paginationEl.id = 'ticketsPagination';
+        paginationEl.className = 'pagination-container';
+        elements.ticketsList.after(paginationEl);
+    }
+
+    paginationEl.style.display = totalPages > 1 || totalItems > 0 ? 'flex' : 'none';
+
+    // Generate page buttons
+    let pageButtons = '';
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentTicketPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        pageButtons += `<button class="pagination-btn ${i === currentTicketPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+    }
+
+    paginationEl.innerHTML = `
+        <div class="pagination-info">
+            <span>${totalItems} total</span>
+        </div>
+        <div class="pagination-controls">
+            <button class="pagination-btn pagination-nav" data-page="prev" ${currentTicketPage === 1 ? 'disabled' : ''}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            ${pageButtons}
+            <button class="pagination-btn pagination-nav" data-page="next" ${currentTicketPage === totalPages ? 'disabled' : ''}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
+        </div>
+        <div class="pagination-per-page">
+            <select id="ticketsPerPageSelect">
+                <option value="10" ${ticketsPerPage === 10 ? 'selected' : ''}>10 / page</option>
+                <option value="20" ${ticketsPerPage === 20 ? 'selected' : ''}>20 / page</option>
+                <option value="30" ${ticketsPerPage === 30 ? 'selected' : ''}>30 / page</option>
+                <option value="40" ${ticketsPerPage === 40 ? 'selected' : ''}>40 / page</option>
+                <option value="50" ${ticketsPerPage === 50 ? 'selected' : ''}>50 / page</option>
+            </select>
+        </div>
+    `;
+
+    // Add event listeners for pagination
+    paginationEl.querySelectorAll('.pagination-btn[data-page]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const page = btn.dataset.page;
+            if (page === 'prev') {
+                if (currentTicketPage > 1) {
+                    currentTicketPage--;
+                    renderTickets();
+                }
+            } else if (page === 'next') {
+                if (currentTicketPage < totalPages) {
+                    currentTicketPage++;
+                    renderTickets();
+                }
+            } else {
+                currentTicketPage = parseInt(page);
+                renderTickets();
+            }
+        });
+    });
+
+    // Per page selector
+    const perPageSelect = document.getElementById('ticketsPerPageSelect');
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', (e) => {
+            ticketsPerPage = parseInt(e.target.value);
+            currentTicketPage = 1; // Reset to first page
+            renderTickets();
+        });
+    }
 }
 
 function getTicketStatusLabel(status) {
@@ -3694,23 +3804,34 @@ async function init() {
     if (elements.ticketStatusFilter) {
         elements.ticketStatusFilter.addEventListener('change', (e) => {
             currentTicketStatusFilter = e.target.value;
+            currentTicketPage = 1; // Reset to first page
             renderTickets();
         });
     }
     if (elements.ticketSearchInput) {
         elements.ticketSearchInput.addEventListener('input', (e) => {
             currentTicketSearchQuery = e.target.value;
+            currentTicketPage = 1; // Reset to first page
             renderTickets();
         });
     }
     if (elements.ticketHostFilter) {
-        elements.ticketHostFilter.addEventListener('change', renderTickets);
+        elements.ticketHostFilter.addEventListener('change', () => {
+            currentTicketPage = 1; // Reset to first page
+            renderTickets();
+        });
     }
     if (elements.ticketSubmitterFilter) {
-        elements.ticketSubmitterFilter.addEventListener('change', renderTickets);
+        elements.ticketSubmitterFilter.addEventListener('change', () => {
+            currentTicketPage = 1; // Reset to first page
+            renderTickets();
+        });
     }
     if (elements.ticketDateFilter) {
-        elements.ticketDateFilter.addEventListener('change', renderTickets);
+        elements.ticketDateFilter.addEventListener('change', () => {
+            currentTicketPage = 1; // Reset to first page
+            renderTickets();
+        });
     }
     if (elements.addCommentBtn) {
         elements.addCommentBtn.addEventListener('click', handleAddComment);
