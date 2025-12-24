@@ -1,5 +1,5 @@
 // Service Worker for Network Monitor PWA
-const CACHE_NAME = 'netmonitor-v3'; // iOS fix - removed incompatible notification options
+const CACHE_NAME = 'netmonitor-v4'; // Fixed external CDN handling for map resources
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -42,14 +42,46 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - network first, fallback to cache
 self.addEventListener('fetch', (event) => {
-    // Skip non-GET requests and API calls
-    if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
+    const url = new URL(event.request.url);
+
+    // Skip non-GET requests
+    if (event.request.method !== 'GET') {
+        return;
+    }
+
+    // Skip API calls - let them go directly to network
+    if (event.request.url.includes('/api/')) {
+        return;
+    }
+
+    // Skip external CDN resources - let browser handle directly
+    // These resources have their own caching and CORS handling
+    const externalDomains = [
+        'unpkg.com',
+        'cdn.jsdelivr.net',
+        'fonts.googleapis.com',
+        'fonts.gstatic.com',
+        'tile.openstreetmap.org',
+        'nominatim.openstreetmap.org'
+    ];
+
+    if (externalDomains.some(domain => url.hostname.includes(domain))) {
+        // Don't intercept - let browser fetch directly
+        return;
+    }
+
+    // Only cache same-origin requests
+    if (url.origin !== self.location.origin) {
         return;
     }
 
     event.respondWith(
         fetch(event.request)
             .then((response) => {
+                // Only cache valid responses
+                if (!response || response.status !== 200 || response.type !== 'basic') {
+                    return response;
+                }
                 // Clone the response and cache it
                 const responseToCache = response.clone();
                 caches.open(CACHE_NAME).then((cache) => {
@@ -58,8 +90,18 @@ self.addEventListener('fetch', (event) => {
                 return response;
             })
             .catch(() => {
-                // Fallback to cache
-                return caches.match(event.request);
+                // Fallback to cache, return a proper Response if not found
+                return caches.match(event.request).then((cachedResponse) => {
+                    if (cachedResponse) {
+                        return cachedResponse;
+                    }
+                    // If it's a navigation request and not found, try returning index.html
+                    if (event.request.mode === 'navigate') {
+                        return caches.match('/index.html');
+                    }
+                    // Return empty response for missing resources instead of undefined
+                    return new Response('', { status: 404, statusText: 'Not Found' });
+                });
             })
     );
 });

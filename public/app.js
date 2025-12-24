@@ -1510,9 +1510,16 @@ function renderTicketAttachments(attachments) {
 
     elements.ticketAttachmentsList.innerHTML = attachments.map(att => `
         <div class="attachment-item">
-            <img src="${att}" alt="Attachment" onclick="window.open('${att}', '_blank')">
+            <img src="${att}" alt="Attachment" data-image-url="${att}">
         </div>
     `).join('');
+
+    // Add event listeners for attachment images
+    elements.ticketAttachmentsList.querySelectorAll('.attachment-item img').forEach(img => {
+        img.addEventListener('click', (e) => {
+            window.open(e.target.dataset.imageUrl, '_blank');
+        });
+    });
 }
 
 function renderTicketComments(comments) {
@@ -1523,6 +1530,8 @@ function renderTicketComments(comments) {
         return;
     }
 
+    const ticketId = elements.editTicketId.value;
+
     elements.ticketCommentsList.innerHTML = comments.map(c => `
         <div class="comment-item">
             <div class="comment-header">
@@ -1531,15 +1540,31 @@ function renderTicketComments(comments) {
                     <span class="comment-time">${formatTime(c.createdAt)}</span>
                 </div>
                 ${currentUser && (c.authorId === currentUser.id || currentUser.role === 'admin') ? `
-                    <button class="delete-comment-btn" onclick="handleDeleteComment('${elements.editTicketId.value}', '${c.id}')" title="Hapus Catatan">
+                    <button class="delete-comment-btn" data-ticket-id="${ticketId}" data-comment-id="${c.id}" title="Hapus Catatan">
                         &times;
                     </button>
                 ` : ''}
             </div>
             ${c.text ? `<div class="comment-text">${escapeHtml(c.text)}</div>` : ''}
-            ${c.image ? `<div class="comment-image"><img src="${c.image}" alt="Comment image" onclick="window.open('${c.image}', '_blank')"></div>` : ''}
+            ${c.image ? `<div class="comment-image"><img src="${c.image}" alt="Comment image" data-image-url="${c.image}"></div>` : ''}
         </div>
     `).join('');
+
+    // Add event listeners for delete buttons
+    elements.ticketCommentsList.querySelectorAll('.delete-comment-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const ticketId = e.target.dataset.ticketId;
+            const commentId = e.target.dataset.commentId;
+            handleDeleteComment(ticketId, commentId);
+        });
+    });
+
+    // Add event listeners for image click
+    elements.ticketCommentsList.querySelectorAll('.comment-image img').forEach(img => {
+        img.addEventListener('click', (e) => {
+            window.open(e.target.dataset.imageUrl, '_blank');
+        });
+    });
 }
 
 async function addTicketComment(ticketId, text, imageFile = null) {
@@ -1958,8 +1983,8 @@ function renderHistory(history) {
 
         return `<div class="history-bar ${entry.alive ? 'online' : 'offline'}" 
                      style="height: ${height}%" 
-                     onmouseover="showChartTooltip(event, '${timeStr}', '${latencyStr}')"
-                     onmouseout="hideChartTooltip()"></div>`;
+                     data-time="${timeStr}"
+                     data-latency="${latencyStr}"></div>`;
     }).join('');
 
     // Total width for SVG
@@ -1971,6 +1996,16 @@ function renderHistory(history) {
         </svg>
         ${barsHtml}
     `;
+
+    // Add event listeners for tooltip (CSP compliant)
+    elements.historyChart.querySelectorAll('.history-bar').forEach(bar => {
+        bar.addEventListener('mouseover', (e) => {
+            showChartTooltip(e, bar.dataset.time, bar.dataset.latency);
+        });
+        bar.addEventListener('mouseout', () => {
+            hideChartTooltip();
+        });
+    });
 
     // Render list (limit to 50 items for performance)
     elements.historyList.innerHTML = history.slice(0, 50).map(entry => `
@@ -2652,7 +2687,7 @@ function updateMapMarkers(hosts) {
                     <div class="host-ip">${escapeHtml(host.host)}</div>
                     <span class="status ${host.status}">${host.status === 'online' ? '● Online' : host.status === 'offline' ? '● Offline' : '● Unknown'}</span>
                     ${host.latency ? `<div class="latency">Latency: ${host.latency}ms</div>` : ''}
-                    <button class="btn btn-secondary btn-sm" onclick="openLocationModal('${host.id}')">📍 Ubah Lokasi</button>
+                    <button class="btn btn-secondary btn-sm location-btn" data-host-id="${host.id}">📍 Ubah Lokasi</button>
                 </div>
             `;
 
@@ -2671,6 +2706,17 @@ function updateMapMarkers(hosts) {
                 });
 
                 marker.bindPopup(popupContent);
+
+                // Handle popup button clicks (CSP compliant - no inline onclick)
+                marker.on('popupopen', () => {
+                    const popup = marker.getPopup();
+                    const locationBtn = popup.getElement().querySelector('.location-btn');
+                    if (locationBtn) {
+                        locationBtn.addEventListener('click', () => {
+                            openLocationModal(locationBtn.dataset.hostId);
+                        });
+                    }
+                });
 
                 // Right-click to edit location
                 marker.on('contextmenu', () => {

@@ -202,12 +202,8 @@ app.use(helmet({
             baseUri: ["'self'"],
             // Restrict form submissions to same origin
             formAction: ["'self'"],
-            // Block plugins like Flash
-            pluginTypes: [],
             // Upgrade HTTP to HTTPS in production
             upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
-            // Block all mixed content
-            blockAllMixedContent: process.env.NODE_ENV === 'production' ? [] : null,
         }
     },
     crossOriginEmbedderPolicy: false, // Required for loading external map tiles
