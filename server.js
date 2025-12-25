@@ -1696,39 +1696,36 @@ async function autoPingAllHosts() {
     // saveSnmpTraffic(); // DEPRECATED
 }
 
-// Start auto ping
-// Start auto ping (Recursive setTimeout pattern)
+// Start auto ping (always-on since toggle was removed)
 function startAutoPing() {
+    // Clear any existing interval
     if (autoPingInterval) {
-        clearTimeout(autoPingInterval);
+        clearInterval(autoPingInterval);
         autoPingInterval = null;
     }
 
-    // Definition of the recursive loop
-    const runPingLoop = async () => {
-        if (!autoPingEnabled) return;
+    // Run immediately on startup
+    autoPingAllHosts().catch(err => {
+        console.error('[AUTO-PING] Initial ping cycle error:', err);
+    });
 
+    // Schedule recurring pings using setInterval (more reliable)
+    autoPingInterval = setInterval(async () => {
         try {
             await autoPingAllHosts();
         } catch (err) {
-            console.error('Error in auto-ping loop:', err);
+            console.error('[AUTO-PING] Error in ping cycle:', err);
+            // Don't let errors stop the interval - just log and continue
         }
+    }, PROBE_INTERVAL);
 
-        // Schedule next run only after current one finishes
-        if (autoPingEnabled) {
-            autoPingInterval = setTimeout(runPingLoop, PROBE_INTERVAL);
-        }
-    };
-
-    // Start immediately
-    runPingLoop();
-    console.log(`ðŸ”„ Auto-ping started (every ${PROBE_INTERVAL / 1000} seconds, ${PROBE_DOWN_COUNT} failures to mark offline)`);
+    console.log(`🔄 Auto-ping started (every ${PROBE_INTERVAL / 1000} seconds, ${PROBE_DOWN_COUNT} failures to mark offline)`);
 }
 
 // Stop auto ping
 function stopAutoPing() {
     if (autoPingInterval) {
-        clearTimeout(autoPingInterval); // Change to clearTimeout
+        clearInterval(autoPingInterval);
         autoPingInterval = null;
     }
     console.log('â¹ï¸ Auto-ping stopped');

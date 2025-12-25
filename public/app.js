@@ -582,10 +582,7 @@ function connectSSE() {
         });
     });
 
-    eventSource.addEventListener('auto-ping-status', (e) => {
-        const data = JSON.parse(e.data);
-        updateAutoPingUI(data.enabled);
-    });
+    // Auto-ping is always enabled now - no need to track status changes
 
     eventSource.addEventListener('host-added', (e) => {
         // Host added - UI will update via hosts-update event
@@ -3725,10 +3722,7 @@ async function init() {
         if (e.key === 'Enter') handleQuickPing();
     });
 
-    // Event listeners - Auto Ping Toggle
-    if (elements.autoPingToggle) {
-        elements.autoPingToggle.addEventListener('change', handleAutoPingToggle);
-    }
+    // Auto Ping is now always enabled - no toggle needed
 
     // Event listeners - Add Host Modal
     elements.closeModalBtn.addEventListener('click', () => hideModal(elements.addHostModal));
@@ -3796,7 +3790,25 @@ async function init() {
     if (elements.restoreMapBtn) {
         elements.restoreMapBtn.addEventListener('click', () => {
             if (networkMap) {
-                networkMap.setView([-2.5, 118.0], 5);
+                // First try to fit to all markers
+                if (markerCluster && Object.keys(hostMarkers).length > 0) {
+                    const bounds = markerCluster.getBounds();
+                    if (bounds.isValid()) {
+                        networkMap.fitBounds(bounds, {
+                            padding: [30, 30],
+                            maxZoom: 10
+                        });
+                        return;
+                    }
+                }
+                // Fallback: Use Indonesia bounds that work on all screen sizes
+                const indonesiaBounds = L.latLngBounds(
+                    L.latLng(-11.0, 95.0),   // Southwest corner
+                    L.latLng(6.0, 141.0)     // Northeast corner
+                );
+                networkMap.fitBounds(indonesiaBounds, {
+                    padding: [20, 20]
+                });
             }
         });
     }

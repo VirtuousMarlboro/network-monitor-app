@@ -4575,3 +4575,295 @@ select.valid {
         font-size: 0.8rem;
     }
 }
+
+/* ========================================
+   ENHANCED ANIMATIONS
+   ======================================== */
+
+/* Keyframe Definitions */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+@keyframes pulseGlow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 var(--accent-glow);
+    }
+
+    50% {
+        box-shadow: 0 0 20px 5px var(--accent-glow);
+    }
+}
+
+@keyframes statusPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+@keyframes borderGlow {
+
+    0%,
+    100% {
+        border-color: rgba(124, 58, 237, 0.3);
+    }
+
+    50% {
+        border-color: rgba(124, 58, 237, 0.6);
+    }
+}
+
+/* Host Card Animations - fade-in disabled to prevent re-animation on SSE updates */
+.host-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: var(--shadow-lg), 0 0 30px rgba(124, 58, 237, 0.15);
+}
+
+/* Status Indicator Pulse - DISABLED per user request */
+
+/* Button Hover Effects */
+.btn-primary {
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px var(--accent-glow);
+}
+
+.btn-primary::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.4s, height 0.4s;
+}
+
+.btn-primary:active::after {
+    width: 200px;
+    height: 200px;
+}
+
+/* Modal Animations */
+.modal.active {
+    animation: fadeIn 0.2s ease-out;
+}
+
+.modal.active .modal-content {
+    animation: fadeInScale 0.3s ease-out;
+}
+
+/* Ticket Card Animation */
+.ticket-card {
+    animation: fadeInUp 0.4s ease-out;
+    animation-fill-mode: both;
+}
+
+.ticket-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md), 0 0 25px rgba(124, 58, 237, 0.1);
+}
+
+/* Log Entry Animation */
+.log-entry {
+    animation: slideInRight 0.3s ease-out;
+}
+
+/* Stat Card Hover */
+.stat-card {
+    transition: all var(--transition-normal);
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+.stat-card .stat-value {
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover .stat-value {
+    transform: scale(1.05);
+}
+
+/* Tab Animation */
+.tab-btn {
+    transition: all var(--transition-fast);
+    position: relative;
+}
+
+/* Tab Underline Animation - DISABLED per user request */
+
+/* Loading Shimmer Effect */
+.loading-shimmer {
+    background: linear-gradient(90deg,
+            var(--bg-tertiary) 25%,
+            var(--bg-secondary) 50%,
+            var(--bg-tertiary) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+/* Notification Animation */
+.notification {
+    animation: slideInRight 0.3s ease-out, fadeIn 0.3s ease-out;
+}
+
+.notification.removing {
+    animation: fadeOut 0.3s ease-out forwards;
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+/* Input Focus Animation */
+input:focus,
+select:focus,
+textarea:focus {
+    animation: borderGlow 2s ease-in-out infinite;
+}
+
+/* Floating Action Button Hover */
+.floating-btn:hover,
+.action-btn:hover {
+    transform: scale(1.1) rotate(5deg);
+}
+
+/* Map Marker Bounce */
+@keyframes markerBounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.leaflet-marker-icon:hover {
+    animation: markerBounce 0.5s ease-in-out;
+}
+
+/* Section Fade-in Animation - applies to all tabs when switching */
+.content-section:not(.hidden),
+.hosts-section:not(.hidden),
+.logs-section:not(.hidden),
+.map-section:not(.hidden),
+.tickets-section:not(.hidden),
+.settings-section:not(.hidden),
+.users-section:not(.hidden),
+.stats-section:not(.hidden) {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
