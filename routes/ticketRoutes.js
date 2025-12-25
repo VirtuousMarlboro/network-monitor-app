@@ -229,6 +229,11 @@ function createTicketRoutes(deps) {
         saveTickets();
         broadcastSSE('ticket-deleted', { id });
 
+        // Audit log for ticket deletion
+        const users = getUsers();
+        const user = users.find(u => u.id === req.session?.userId);
+        addAuditLog(req.session?.userId || 'system', user?.username || 'anonymous', 'ticket_delete', `Deleted ticket: ${deleted.ticketId}`, { ticketId: id });
+
         res.json({ message: 'Ticket deleted', ticket: deleted });
     });
 

@@ -315,7 +315,7 @@ let autoPingEnabled = true;
 let autoPingInterval = null;
 
 // Probe configuration
-const PROBE_INTERVAL = 10000;  // 10 seconds polling interval
+let PROBE_INTERVAL = 10000;  // 10 seconds polling interval (use 'let' to allow dynamic changes)
 const PROBE_TIMEOUT = 1;        // 1 second timeout for ping
 const PROBE_DOWN_COUNT = 2;     // 2 failures to declare device down
 const TICKET_DELAY = 120000;    // 2 minutes delay before creating ticket (in ms)
@@ -332,6 +332,50 @@ let hostTicketCreated = {};
 // Store status change logs
 let statusLogs = [];
 const MAX_LOGS = 500;
+
+/**
+ * Get the last log entry for a specific host
+ * @param {string} hostId 
+ * @returns {object|null} The last log entry for the host, or null if none
+ */
+function getLastLogForHost(hostId) {
+    return statusLogs.find(log => log.hostId === hostId) || null;
+}
+
+/**
+ * Create a status log entry, preventing duplicate consecutive logs
+ * @param {object} hostData - The host data object
+ * @param {string} logType - 'up' or 'down'
+ * @param {string} timestamp - ISO timestamp
+ * @returns {object|null} The created log entry, or null if duplicate
+ */
+function createStatusLog(hostData, logType, timestamp) {
+    // Check last log for this host to prevent duplicates
+    const lastLog = getLastLogForHost(hostData.id);
+    if (lastLog && lastLog.type === logType) {
+        console.log(`[LOG-SKIP] Duplicate ${logType} log prevented for ${hostData.name}`);
+        return null;
+    }
+
+    const logEntry = {
+        id: `${Date.now()}-${hostData.id}`,
+        timestamp: timestamp,
+        hostId: hostData.id,
+        hostName: hostData.name,
+        host: hostData.host,
+        type: logType
+    };
+
+    statusLogs.unshift(logEntry);
+    if (statusLogs.length > MAX_LOGS) statusLogs.pop();
+    saveLogs();
+
+    // Broadcast log update immediately
+    broadcastSSE('log-update', logEntry);
+
+    console.log(`[LOG] ${hostData.name}: ${logType.toUpperCase()}`);
+    return logEntry;
+}
 
 // Store users
 let users = [];
@@ -1480,25 +1524,14 @@ async function autoPingAllHosts() {
 
         // Check for status change - Host went DOWN
         if (previousStatus === 'online' && newStatus === 'offline') {
-            const logEntry = {
-                id: `${Date.now()}-${hostData.id}`,
-                timestamp: result.timestamp,
-                hostId: hostData.id,
-                hostName: hostData.name,
-                host: hostData.host,
-                type: 'down'
-            };
-            statusLogs.unshift(logEntry);
-            if (statusLogs.length > MAX_LOGS) statusLogs.pop();
-            saveLogs(); // Persist to file
+            const logEntry = createStatusLog(hostData, 'down', result.timestamp);
 
-            // Broadcast log update immediately for realtime UI update
-            broadcastSSE('log-update', logEntry);
-
-            // Track when host first went down
-            hostDownSince[hostData.id] = Date.now();
-            hostTicketCreated[hostData.id] = false;
-            console.log(`â±ï¸ Host ${hostData.name} went down, waiting 2 minutes before creating ticket...`);
+            // Track when host first went down (only if log was created)
+            if (logEntry) {
+                hostDownSince[hostData.id] = Date.now();
+                hostTicketCreated[hostData.id] = false;
+                console.log(`⏱️ Host ${hostData.name} went down, waiting 2 minutes before creating ticket...`);
+            }
 
             // Send Telegram Notification immediately (unless in maintenance)
             const maintenanceDown = isHostInMaintenance(hostData.id);
@@ -1598,30 +1631,19 @@ async function autoPingAllHosts() {
 
         // Check for status change - Host came back UP (from offline or unknown)
         if ((previousStatus === 'offline' || previousStatus === 'unknown') && newStatus === 'online') {
-            const logEntry = {
-                id: `${Date.now()}-${hostData.id}`,
-                timestamp: result.timestamp,
-                hostId: hostData.id,
-                hostName: hostData.name,
-                host: hostData.host,
-                type: 'up'
-            };
-            statusLogs.unshift(logEntry);
-            if (statusLogs.length > MAX_LOGS) statusLogs.pop();
-            saveLogs(); // Persist to file
-
-            // Broadcast log update immediately for realtime UI update
-            broadcastSSE('log-update', logEntry);
+            const logEntry = createStatusLog(hostData, 'up', result.timestamp);
 
             // Reset down tracking - host is back online
             const wasTicketCreated = hostTicketCreated[hostData.id];
             delete hostDownSince[hostData.id];
             delete hostTicketCreated[hostData.id];
 
-            if (previousStatus === 'offline' && !wasTicketCreated) {
-                console.log(`✅ Host ${hostData.name} recovered before 2 minutes - no ticket created`);
-            } else if (previousStatus === 'unknown') {
-                console.log(`✅ Host ${hostData.name} is now online (first successful ping)`);
+            if (logEntry) {
+                if (previousStatus === 'offline' && !wasTicketCreated) {
+                    console.log(`✅ Host ${hostData.name} recovered before 2 minutes - no ticket created`);
+                } else if (previousStatus === 'unknown') {
+                    console.log(`✅ Host ${hostData.name} is now online (first successful ping)`);
+                }
             }
 
             // Send Telegram Notification (unless in maintenance)
@@ -1776,8 +1798,12 @@ app.post('/api/ping/:id', async (req, res) => {
 
     const result = await pingHost(hostData.host);
 
+    // Store previous status for change detection
+    const previousStatus = hostData.status || 'unknown';
+    const newStatus = result.alive ? 'online' : 'offline';
+
     // Update host status
-    hostData.status = result.alive ? 'online' : 'offline';
+    hostData.status = newStatus;
     hostData.latency = result.time;
     hostData.lastCheck = result.timestamp;
 
@@ -1790,17 +1816,39 @@ app.post('/api/ping/:id', async (req, res) => {
         pingHistory[id].pop();
     }
 
+    // Create log entry if status changed (using helper to prevent duplicates)
+    if (previousStatus !== newStatus) {
+        console.log(`[MANUAL-PING] ${hostData.name}: ${previousStatus} -> ${newStatus}`);
+
+        const logType = newStatus === 'online' ? 'up' : 'down';
+        const logEntry = createStatusLog(hostData, logType, result.timestamp);
+
+        if (logEntry) {
+            broadcastSSE('hosts-update', monitoredHosts);
+
+            // Handle status-specific actions
+            if (newStatus === 'online' && (previousStatus === 'offline' || previousStatus === 'unknown')) {
+                hostFailureCount[hostData.id] = 0;
+                delete hostDownSince[hostData.id];
+                delete hostTicketCreated[hostData.id];
+            }
+        }
+    }
+
     res.json({ ...hostData, pingResult: result });
 });
 
 // API: Ping all hosts
 app.post('/api/ping-all', async (req, res) => {
     const results = [];
+    const logEntries = [];
 
     for (const hostData of monitoredHosts) {
+        const previousStatus = hostData.status || 'unknown';
         const result = await pingHost(hostData.host);
+        const newStatus = result.alive ? 'online' : 'offline';
 
-        hostData.status = result.alive ? 'online' : 'offline';
+        hostData.status = newStatus;
         hostData.latency = result.time;
         hostData.lastCheck = result.timestamp;
 
@@ -1812,7 +1860,31 @@ app.post('/api/ping-all', async (req, res) => {
             pingHistory[hostData.id].pop();
         }
 
+        // Create log entry if status changed (using helper to prevent duplicates)
+        if (previousStatus !== newStatus) {
+            console.log(`[PING-ALL] ${hostData.name}: ${previousStatus} -> ${newStatus}`);
+
+            const logType = newStatus === 'online' ? 'up' : 'down';
+            const logEntry = createStatusLog(hostData, logType, result.timestamp);
+
+            if (logEntry) {
+                logEntries.push(logEntry);
+
+                // Handle status-specific actions
+                if (newStatus === 'online' && (previousStatus === 'offline' || previousStatus === 'unknown')) {
+                    hostFailureCount[hostData.id] = 0;
+                    delete hostDownSince[hostData.id];
+                    delete hostTicketCreated[hostData.id];
+                }
+            }
+        }
+
         results.push({ ...hostData, pingResult: result });
+    }
+
+    // Broadcast hosts update if there were any status changes
+    if (logEntries.length > 0) {
+        broadcastSSE('hosts-update', monitoredHosts);
     }
 
     res.json(results);
@@ -3178,4 +3250,9 @@ app.listen(PORT, () => {
 
     // Start SNMP Polling
     startSnmpPolling();
+
+    // BUG-004 FIX: SSE heartbeat to clean up dead clients periodically
+    setInterval(() => {
+        broadcastSSE('heartbeat', { timestamp: Date.now() });
+    }, 30000); // Every 30 seconds
 });

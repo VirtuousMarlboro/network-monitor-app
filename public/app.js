@@ -25,6 +25,7 @@ let currentTicketSearchQuery = '';
 let currentTicketPage = 1;
 let ticketsPerPage = 10;
 let cachedUsers = []; // For PIC selection
+let statusLogs = []; // Cache for status change logs
 
 // Abort Controllers for streams
 let currentPingController = null;
@@ -598,19 +599,20 @@ function connectSSE() {
 
     // Realtime log updates (status changes)
     eventSource.addEventListener('log-update', (e) => {
-        const logEntry = JSON.parse(e.data);
-        console.log('📋 Log update received:', logEntry);
+        try {
+            const logEntry = JSON.parse(e.data);
+            console.log('📋 Log update received:', logEntry);
 
-        // Add to cached logs if we have them
-        if (typeof statusLogs !== 'undefined') {
-            statusLogs = statusLogs || [];
+            // Add to cached logs
             statusLogs.unshift(logEntry);
             if (statusLogs.length > 1000) statusLogs.pop();
-        }
 
-        // Re-render logs if on logs tab
-        if (!elements.logsSection?.classList.contains('hidden')) {
-            loadAndRenderLogs();
+            // Re-render logs if on logs tab
+            if (!elements.logsSection?.classList.contains('hidden')) {
+                loadAndRenderLogs();
+            }
+        } catch (err) {
+            console.error('Failed to parse log-update:', err);
         }
     });
 
@@ -5699,7 +5701,7 @@ async function loadApiKeys() {
             </div>
         `).join('');
     } catch (err) {
-        container.innerHTML = '<p class="empty-state">Gagal memuat API keys</p>';
+        container.innerHTML = '<p class="empty-state">Belum ada API keys</p>';
     }
 }
 
@@ -5799,7 +5801,7 @@ async function loadWebhooks() {
             </div>
         `).join('');
     } catch (err) {
-        container.innerHTML = '<p class="empty-state">Gagal memuat webhooks</p>';
+        container.innerHTML = '<p class="empty-state">Belum ada webhooks</p>';
     }
 }
 
@@ -6250,11 +6252,11 @@ function initSnmpEventHandlers() {
     }
 
     // Edit Host Modal Close - Reset SNMP scan state
-    const closeEditHostBtn = elements.closeEditHostBtn;
+    const closeEditHostBtn = elements.closeEditHostModalBtn;
     if (closeEditHostBtn) {
         closeEditHostBtn.addEventListener('click', resetSnmpScanState);
     }
-    const cancelEditHostBtn = elements.cancelEditHostBtn;
+    const cancelEditHostBtn = elements.cancelEditHostModalBtn;
     if (cancelEditHostBtn) {
         cancelEditHostBtn.addEventListener('click', resetSnmpScanState);
     }
