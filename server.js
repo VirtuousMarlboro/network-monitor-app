@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -121,7 +121,7 @@ app.use((req, res, next) => {
 // ========================================
 const SESSION_SECRET = process.env.SESSION_SECRET;
 if (!SESSION_SECRET || SESSION_SECRET.length < 32 || SESSION_SECRET.includes('change_me') || SESSION_SECRET.includes('fallback')) {
-    console.error('âŒ FATAL: SESSION_SECRET must be set and at least 32 characters!');
+    console.error('❌ FATAL: SESSION_SECRET must be set and at least 32 characters!');
     console.error('   Generate one with: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"');
     process.exit(1);
 }
@@ -155,7 +155,7 @@ if (fs.existsSync(VAPID_KEYS_FILE)) {
     // Generate new VAPID keys
     vapidKeys = webpush.generateVAPIDKeys();
     fs.writeFileSync(VAPID_KEYS_FILE, JSON.stringify(vapidKeys, null, 2));
-    console.log('ðŸ“± Generated new VAPID keys for push notifications');
+    console.log('📱 Generated new VAPID keys for push notifications');
 }
 
 // Configure web-push with VAPID keys
@@ -177,7 +177,7 @@ if (process.env.NODE_ENV === 'production') {
         }
         next();
     });
-    console.log('ðŸ”’ HTTPS redirect enabled for production');
+    console.log('🔒 HTTPS redirect enabled for production');
 }
 
 // Security Middleware with Hardened CSP
@@ -278,14 +278,14 @@ app.use(express.json());
 
 // Web Application Firewall (WAF) - Must be after express.json() to access req.body
 app.use(wafMiddleware);
-console.log('ðŸ›¡ï¸ WAF (Web Application Firewall) enabled');
+console.log('🛡️ WAF (Web Application Firewall) enabled');
 app.use(express.static('public'));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 // SECURITY: Persistent SQLite Session Store
 const SESSION_DB_PATH = path.join(DATA_DIR, 'sessions.db');
 const sessionDb = new Database(SESSION_DB_PATH);
-console.log('ðŸ’¾ Session store: SQLite (persistent)');
+console.log('💾 Session store: SQLite (persistent)');
 
 app.use(session({
     name: 'nms.sid', // Custom session name (hide express)
@@ -425,21 +425,21 @@ function loadData() {
         if (fs.existsSync(HOSTS_FILE)) {
             const hostsData = fs.readFileSync(HOSTS_FILE, 'utf-8');
             monitoredHosts = JSON.parse(hostsData);
-            console.log(`ðŸ“‚ Loaded ${monitoredHosts.length} hosts from file`);
+            console.log(`📂 Loaded ${monitoredHosts.length} hosts from file`);
         }
 
         // Load logs
         if (fs.existsSync(LOGS_FILE)) {
             const logsData = fs.readFileSync(LOGS_FILE, 'utf-8');
             statusLogs = JSON.parse(logsData);
-            console.log(`ðŸ“‚ Loaded ${statusLogs.length} logs from file`);
+            console.log(`📂 Loaded ${statusLogs.length} logs from file`);
         }
 
         // Load users
         if (fs.existsSync(USERS_FILE)) {
             const usersData = fs.readFileSync(USERS_FILE, 'utf-8');
             users = JSON.parse(usersData);
-            console.log(`ðŸ“‚ Loaded ${users.length} users from file`);
+            console.log(`📂 Loaded ${users.length} users from file`);
         } else {
             // Create default admin if no users file exists
             createDefaultAdmin();
@@ -451,7 +451,7 @@ function loadData() {
             const parsed = JSON.parse(ticketsData);
             tickets = parsed.tickets || [];
             ticketCounters = parsed.counters || { auto: 0, manual: 0 };
-            console.log(`ðŸ“‚ Loaded ${tickets.length} tickets from file`);
+            console.log(`📂 Loaded ${tickets.length} tickets from file`);
         }
 
         // Load settings
@@ -461,49 +461,49 @@ function loadData() {
             if (settings.telegram) {
                 telegramConfig = settings.telegram;
             }
-            console.log('ðŸ“‚ Loaded settings from file');
+            console.log('📂 Loaded settings from file');
         }
 
         // Load host groups
         if (fs.existsSync(HOST_GROUPS_FILE)) {
             const groupsData = fs.readFileSync(HOST_GROUPS_FILE, 'utf-8');
             hostGroups = JSON.parse(groupsData);
-            console.log(`ðŸ“‚ Loaded ${hostGroups.length} host groups from file`);
+            console.log(`📂 Loaded ${hostGroups.length} host groups from file`);
         }
 
         // Load audit logs
         if (fs.existsSync(AUDIT_LOGS_FILE)) {
             const auditData = fs.readFileSync(AUDIT_LOGS_FILE, 'utf-8');
             auditLogs = JSON.parse(auditData);
-            console.log(`ðŸ“‚ Loaded ${auditLogs.length} audit logs from file`);
+            console.log(`📂 Loaded ${auditLogs.length} audit logs from file`);
         }
 
         // Load maintenance windows (Phase 2)
         if (fs.existsSync(MAINTENANCE_FILE)) {
             const maintenanceData = fs.readFileSync(MAINTENANCE_FILE, 'utf-8');
             maintenanceWindows = JSON.parse(maintenanceData);
-            console.log(`ðŸ“‚ Loaded ${maintenanceWindows.length} maintenance windows from file`);
+            console.log(`📂 Loaded ${maintenanceWindows.length} maintenance windows from file`);
         }
 
         // Load push subscriptions (Phase 3)
         if (fs.existsSync(PUSH_SUBSCRIPTIONS_FILE)) {
             const pushData = fs.readFileSync(PUSH_SUBSCRIPTIONS_FILE, 'utf-8');
             pushSubscriptions = JSON.parse(pushData);
-            console.log(`ðŸ“‚ Loaded ${pushSubscriptions.length} push subscriptions from file`);
+            console.log(`📂 Loaded ${pushSubscriptions.length} push subscriptions from file`);
         }
 
         // Load API keys (Phase 3)
         if (fs.existsSync(API_KEYS_FILE)) {
             const apiKeysData = fs.readFileSync(API_KEYS_FILE, 'utf-8');
             apiKeys = JSON.parse(apiKeysData);
-            console.log(`ðŸ“‚ Loaded ${apiKeys.length} API keys from file`);
+            console.log(`📂 Loaded ${apiKeys.length} API keys from file`);
         }
 
         // Load webhooks (Phase 3)
         if (fs.existsSync(WEBHOOKS_FILE)) {
             const webhooksData = fs.readFileSync(WEBHOOKS_FILE, 'utf-8');
             webhooks = JSON.parse(webhooksData);
-            console.log(`ðŸ“‚ Loaded ${webhooks.length} webhooks from file`);
+            console.log(`📂 Loaded ${webhooks.length} webhooks from file`);
         }
 
         // SNMP traffic now stored in SQLite - no need to load from JSON
@@ -671,7 +671,7 @@ function savePushSubscriptions() {
  */
 async function sendPushNotificationToAll(payload) {
     if (pushSubscriptions.length === 0) {
-        console.log('ðŸ“± No push subscribers');
+        console.log('📱 No push subscribers');
         return;
     }
 
@@ -701,7 +701,7 @@ async function sendPushNotificationToAll(payload) {
             if (error.statusCode === 404 || error.statusCode === 410) {
                 // Subscription expired or invalid
                 expiredSubscriptions.push(subscription.endpoint);
-                console.log('ðŸ“± Removing expired push subscription');
+                console.log('📱 Removing expired push subscription');
             } else {
                 console.error('Push notification error:', error.message);
             }
@@ -716,7 +716,7 @@ async function sendPushNotificationToAll(payload) {
         savePushSubscriptions();
     }
 
-    console.log(`ðŸ“± Push notifications sent to ${pushSubscriptions.length} subscribers`);
+    console.log(`📱 Push notifications sent to ${pushSubscriptions.length} subscribers`);
 }
 
 // Phase 3: API Key Functions
@@ -783,7 +783,7 @@ async function sendWebhookEvent(eventType, payload) {
     const activeWebhooks = webhooks.filter(w => w.enabled && w.events.includes(eventType));
 
     if (activeWebhooks.length === 0) {
-        console.log(`ðŸ”— No webhooks configured for event: ${eventType}`);
+        console.log(`🔗 No webhooks configured for event: ${eventType}`);
         return;
     }
 
@@ -813,14 +813,14 @@ async function sendWebhookEvent(eventType, payload) {
             });
 
             if (response.ok) {
-                console.log(`ðŸ”— Webhook sent successfully to ${webhook.name}: ${eventType}`);
+                console.log(`🔗 Webhook sent successfully to ${webhook.name}: ${eventType}`);
                 webhook.lastDelivery = { success: true, timestamp: new Date().toISOString() };
             } else {
-                console.error(`ðŸ”— Webhook failed for ${webhook.name}: ${response.status}`);
+                console.error(`🔗 Webhook failed for ${webhook.name}: ${response.status}`);
                 webhook.lastDelivery = { success: false, timestamp: new Date().toISOString(), error: `HTTP ${response.status}` };
             }
         } catch (error) {
-            console.error(`ðŸ”— Webhook error for ${webhook.name}:`, error.message);
+            console.error(`🔗 Webhook error for ${webhook.name}:`, error.message);
             webhook.lastDelivery = { success: false, timestamp: new Date().toISOString(), error: error.message };
         }
     }
@@ -855,7 +855,7 @@ function addAuditLog(userId, username, action, details, metadata = {}) {
     }
 
     saveAuditLogs();
-    console.log(`ðŸ“ Audit: [${action}] ${username} - ${details}`);
+    console.log(`📝 Audit: [${action}] ${username} - ${details}`);
 }
 
 function generateTicketId(source, incidentDate = null) {
@@ -919,7 +919,7 @@ function createDefaultAdmin() {
         mustChangePassword: true // Force admin to change password on first login
     }];
     saveUsers();
-    console.log(`âš ï¸ Created default admin user (ID: ${adminId}) - MUST CHANGE PASSWORD ON FIRST LOGIN`);
+    console.log(`⚠️ Created default admin user (ID: ${adminId}) - MUST CHANGE PASSWORD ON FIRST LOGIN`);
 }
 
 // ========================================
@@ -1188,14 +1188,14 @@ const telegramService = {
         if (!isDuplicate) {
             // Limit queue size to prevent memory issues during outages
             if (this.queue.length >= 50) {
-                console.warn('âš ï¸ Telegram queue full (50), dropping oldest message');
+                console.warn('⚠️ Telegram queue full (50), dropping oldest message');
                 this.queue.shift(); // Remove oldest
             }
             this.queue.push({ message, retries: 0, addedAt: Date.now() });
-            console.log(`ðŸ“¬ Telegram queue: ${this.queue.length} message(s) pending`);
+            console.log(`📬 Telegram queue: ${this.queue.length} message(s) pending`);
             this.processQueue();
         } else {
-            console.log('ðŸ“¬ Duplicate message skipped');
+            console.log('📬 Duplicate message skipped');
         }
     },
 
@@ -1207,7 +1207,7 @@ const telegramService = {
         // Check rate limit before processing
         if (!this.canSendMessage()) {
             const waitTime = this.getWaitTime();
-            console.log(`â³ Rate limit: waiting ${Math.round(waitTime / 1000)}s before sending (${this.messageTimestamps.length}/${this.maxMessagesPerMinute} in last minute)`);
+            console.log(`⏳ Rate limit: waiting ${Math.round(waitTime / 1000)}s before sending (${this.messageTimestamps.length}/${this.maxMessagesPerMinute} in last minute)`);
 
             setTimeout(() => {
                 this.isProcessing = false;
@@ -1220,7 +1220,7 @@ const telegramService = {
 
         // Skip stale messages (older than 5 minutes)
         if (Date.now() - currentItem.addedAt > 300000) {
-            console.warn('âš ï¸ Dropping stale message (>5 min old)');
+            console.warn('⚠️ Dropping stale message (>5 min old)');
             this.queue.shift();
             this.isProcessing = false;
             this.processQueue();
@@ -1235,7 +1235,7 @@ const telegramService = {
             this.queue.shift();
 
             if (this.queue.length > 0) {
-                console.log(`ðŸ“¬ Telegram queue: ${this.queue.length} message(s) remaining`);
+                console.log(`📬 Telegram queue: ${this.queue.length} message(s) remaining`);
             }
 
             // Wait before next message
@@ -1250,7 +1250,7 @@ const telegramService = {
             if (error.status === 429) {
                 // Rate limited by Telegram - Use their retry_after value, NO retry increment
                 const retryAfter = (error.retryAfter || 60) * 1000;
-                console.warn(`âš ï¸ Telegram Rate Limit (429)! Pausing for ${retryAfter / 1000}s`);
+                console.warn(`⚠️ Telegram Rate Limit (429)! Pausing for ${retryAfter / 1000}s`);
 
                 setTimeout(() => {
                     this.isProcessing = false;
@@ -1262,7 +1262,7 @@ const telegramService = {
                 currentItem.retries++;
 
                 if (currentItem.retries >= this.maxRetries) {
-                    console.error(`âŒ Max retries (${this.maxRetries}) reached, dropping notification`);
+                    console.error(`❌ Max retries (${this.maxRetries}) reached, dropping notification`);
                     this.queue.shift(); // Drop it immediately
                     this.isProcessing = false;
 
@@ -1272,7 +1272,7 @@ const telegramService = {
                     }, 1000);
                 } else {
                     // Simple fixed delay retry (no exponential to avoid long waits)
-                    console.warn(`ðŸ”„ Retry ${currentItem.retries}/${this.maxRetries} in ${this.baseDelay / 1000}s`);
+                    console.warn(`🔄 Retry ${currentItem.retries}/${this.maxRetries} in ${this.baseDelay / 1000}s`);
 
                     setTimeout(() => {
                         this.isProcessing = false;
@@ -1311,7 +1311,7 @@ const telegramService = {
 
                 res.on('end', () => {
                     if (res.statusCode === 200) {
-                        console.log('âœ… Telegram notification sent');
+                        console.log('✅ Telegram notification sent');
                         resolve();
                     } else {
                         const error = new Error(`Telegram API: ${res.statusCode}`);
@@ -1477,6 +1477,11 @@ async function autoPingAllHosts() {
             newStatus = previousStatus === 'offline' ? 'offline' : 'online';
         }
 
+        // DEBUG: Log all status information
+        if (!result.alive) {
+            console.log(`[DEBUG] ${hostData.name}: alive=${result.alive}, failCount=${hostFailureCount[hostData.id]}, PROBE_DOWN_COUNT=${PROBE_DOWN_COUNT}, prev=${previousStatus}, new=${newStatus}`);
+        }
+
         // Log status change
         if (previousStatus !== newStatus) {
             console.log(`[STATUS] ${hostData.name}: ${previousStatus} -> ${newStatus} (failCount: ${hostFailureCount[hostData.id]})`);
@@ -1486,6 +1491,19 @@ async function autoPingAllHosts() {
         hostData.latency = result.time;
         hostData.lastCheck = result.timestamp;
         hostData.failureCount = hostFailureCount[hostData.id];
+
+        // LOG CONSISTENCY CHECK: Fix missing UP logs after server restart
+        // If host is online but last log is 'down', create an UP log
+        if (newStatus === 'online') {
+            const lastLog = getLastLogForHost(hostData.id);
+            if (lastLog && lastLog.type === 'down') {
+                console.log(`[LOG-FIX] Creating missing UP log for ${hostData.name} (last log was down but host is now online)`);
+                createStatusLog(hostData, 'up', result.timestamp);
+                // Also clean up any stale tracking
+                delete hostDownSince[hostData.id];
+                delete hostTicketCreated[hostData.id];
+            }
+        }
 
         // Store in history (keep last 100 entries)
         if (!pingHistory[hostData.id]) {
@@ -1522,26 +1540,24 @@ async function autoPingAllHosts() {
             pingHistory[hostData.id].pop();
         }
 
-        // Check for status change - Host went DOWN
-        if (previousStatus === 'online' && newStatus === 'offline') {
+        // Check for status change - Host went DOWN (from online OR unknown)
+        if (previousStatus !== 'offline' && newStatus === 'offline') {
             const logEntry = createStatusLog(hostData, 'down', result.timestamp);
 
-            // Track when host first went down (only if log was created)
-            if (logEntry) {
-                hostDownSince[hostData.id] = Date.now();
-                hostTicketCreated[hostData.id] = false;
-                console.log(`⏱️ Host ${hostData.name} went down, waiting 2 minutes before creating ticket...`);
-            }
+            // Track when host first went down
+            hostDownSince[hostData.id] = Date.now();
+            hostTicketCreated[hostData.id] = false;
+            console.log(`?? Host ${hostData.name} went down (from ${previousStatus}), waiting 2 minutes before creating ticket...`);
 
             // Send Telegram Notification immediately (unless in maintenance)
             const maintenanceDown = isHostInMaintenance(hostData.id);
             if (maintenanceDown) {
-                console.log(`ðŸ”§ Host ${hostData.name} is in maintenance - suppressing down notification`);
+                console.log(`🔧 Host ${hostData.name} is in maintenance - suppressing down notification`);
             } else {
-                await sendTelegramNotification(`🔴 Host Offline\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nTime: ${new Date(result.timestamp).toLocaleString()}`);
+                await sendTelegramNotification(`?? Host Offline\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nTime: ${new Date(result.timestamp).toLocaleString()}`);
                 // Also send push notification with unique tag
                 await sendPushNotificationToAll({
-                    title: '🔴 Host Offline',
+                    title: '?? Host Offline',
                     body: `${hostData.name} (${hostData.host}) is down`,
                     tag: `host-down-${hostData.id}-${Date.now()}`
                 });
@@ -1573,16 +1589,31 @@ async function autoPingAllHosts() {
                 hostDownSince[hostData.id] = Date.now();
                 hostTicketCreated[hostData.id] = false;
 
-                // Check if there's already an open/pending/in_progress ticket for this host
-                // This prevents duplicate tickets after server restart
+                // SMART TICKET CHECK: Check if there's an open ticket AND if host recovered since that ticket
                 const existingTicket = tickets.find(t =>
                     t.hostId === hostData.id &&
                     t.source === 'auto' &&
                     ['open', 'pending', 'in_progress'].includes(t.status)
                 );
+
                 if (existingTicket) {
-                    hostTicketCreated[hostData.id] = true; // Mark as already handled
-                    console.log(`[AUTO-TICKET] Host ${hostData.name} already has open ticket ${existingTicket.ticketId} - skipping`);
+                    // Check if host went UP after the existing ticket was created
+                    const ticketCreatedAt = new Date(existingTicket.createdAt).getTime();
+                    const upLogAfterTicket = statusLogs.find(log =>
+                        log.hostId === hostData.id &&
+                        log.type === 'up' &&
+                        new Date(log.timestamp).getTime() > ticketCreatedAt
+                    );
+
+                    if (upLogAfterTicket) {
+                        // Host went UP after the ticket was created - this is a NEW outage
+                        console.log(`[AUTO-TICKET] Host ${hostData.name} has old ticket ${existingTicket.ticketId} but went UP since then - treating as NEW outage`);
+                        // Don't mark as handled - allow new ticket creation
+                    } else {
+                        // Host never went UP since the ticket - same ongoing outage
+                        hostTicketCreated[hostData.id] = true;
+                        console.log(`[AUTO-TICKET] Host ${hostData.name} already has open ticket ${existingTicket.ticketId} and never recovered - skipping`);
+                    }
                 } else {
                     console.log(`[AUTO-TICKET] Started tracking downtime for ${hostData.name} (first detected offline)`);
                 }
@@ -1591,6 +1622,9 @@ async function autoPingAllHosts() {
             // Check if ticket should be created after 2 minutes
             if (!hostTicketCreated[hostData.id]) {
                 const downDuration = Date.now() - hostDownSince[hostData.id];
+                const remainingTime = Math.max(0, TICKET_DELAY - downDuration);
+                console.log(`[AUTO-TICKET] ${hostData.name}: down for ${Math.round(downDuration / 1000)}s, ticket in ${Math.round(remainingTime / 1000)}s`);
+
                 if (downDuration >= TICKET_DELAY) {
                     // Check maintenance status before creating ticket
                     const maintenanceTicket = isHostInMaintenance(hostData.id);
@@ -1598,32 +1632,22 @@ async function autoPingAllHosts() {
                         console.log(`[AUTO-TICKET] Host ${hostData.name} is in maintenance - skipping`);
                         hostTicketCreated[hostData.id] = true; // Mark as "handled" to avoid repeated checks
                     } else {
-                        // Double-check for existing ticket (race condition protection)
-                        const existingTicketCheck = tickets.find(t =>
-                            t.hostId === hostData.id &&
-                            t.source === 'auto' &&
-                            ['open', 'pending', 'in_progress'].includes(t.status)
+                        // No need to double-check for existing ticket - smart check above handles it
+                        // Host has been down for 2 minutes, create ticket now
+                        console.log(`[AUTO-TICKET] Host ${hostData.name} still down after 2 minutes - creating ticket`);
+                        createTicket(
+                            hostData.id,
+                            hostData.name,
+                            hostData.cid,
+                            `Host Down - ${hostData.name}`, // Title
+                            `Host ${hostData.name} (${hostData.host}) has been offline for more than 2 minutes. Auto-ticket created.`, // Description
+                            'auto', // Source
+                            'high' // Priority
                         );
-                        if (existingTicketCheck) {
-                            console.log(`[AUTO-TICKET] Host ${hostData.name} already has ticket ${existingTicketCheck.ticketId} - skipping creation`);
-                            hostTicketCreated[hostData.id] = true;
-                        } else {
-                            // Host has been down for 2 minutes, create ticket now
-                            console.log(`[AUTO-TICKET] Host ${hostData.name} still down after 2 minutes - creating ticket`);
-                            createTicket(
-                                hostData.id,
-                                hostData.name,
-                                hostData.cid,
-                                `Host Down - ${hostData.name}`, // Title
-                                `Host ${hostData.name} (${hostData.host}) has been offline for more than 2 minutes. Auto-ticket created.`, // Description
-                                'auto', // Source
-                                'high' // Priority
-                            );
-                            hostTicketCreated[hostData.id] = true;
+                        hostTicketCreated[hostData.id] = true;
 
-                            // Send additional Telegram notification about ticket creation
-                            await sendTelegramNotification(`[TICKET] Tiket Otomatis Dibuat\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nAlasan: Host down lebih dari 2 menit`);
-                        }
+                        // Send additional Telegram notification about ticket creation
+                        await sendTelegramNotification(`[TICKET] Tiket Otomatis Dibuat\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nAlasan: Host down lebih dari 2 menit`);
                     }
                 }
             }
@@ -1640,21 +1664,21 @@ async function autoPingAllHosts() {
 
             if (logEntry) {
                 if (previousStatus === 'offline' && !wasTicketCreated) {
-                    console.log(`✅ Host ${hostData.name} recovered before 2 minutes - no ticket created`);
+                    console.log(`? Host ${hostData.name} recovered before 2 minutes - no ticket created`);
                 } else if (previousStatus === 'unknown') {
-                    console.log(`✅ Host ${hostData.name} is now online (first successful ping)`);
+                    console.log(`? Host ${hostData.name} is now online (first successful ping)`);
                 }
             }
 
             // Send Telegram Notification (unless in maintenance)
             const maintenanceUp = isHostInMaintenance(hostData.id);
             if (maintenanceUp) {
-                console.log(`🔧 Host ${hostData.name} is in maintenance - suppressing up notification`);
+                console.log(`?? Host ${hostData.name} is in maintenance - suppressing up notification`);
             } else {
-                await sendTelegramNotification(`🟢 Host Online\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nLatency: ${result.time}ms`);
+                await sendTelegramNotification(`?? Host Online\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nLatency: ${result.time}ms`);
                 // Also send push notification with unique tag
                 await sendPushNotificationToAll({
-                    title: '🟢 Host Online',
+                    title: '?? Host Online',
                     body: `${hostData.name} is back online (${result.time}ms)`,
                     tag: `host-up-${hostData.id}-${Date.now()}`
                 });
@@ -1678,7 +1702,7 @@ async function autoPingAllHosts() {
                 inMaintenance: maintenanceUp !== null
             });
         }
-    }
+    } // End of for loop
 
     // Broadcast updates to all clients
     broadcastSSE('hosts-update', monitoredHosts);
@@ -1687,13 +1711,9 @@ async function autoPingAllHosts() {
     if (alerts.length > 0) {
         broadcastSSE('alerts', alerts);
     }
-
     // Log completion
     const duration = Date.now() - startTime;
     console.log(`[AUTO-PING] Ping cycle completed in ${duration}ms. Broadcast to ${sseClients.length} clients.`);
-
-    // SQLite handles traffic persistence automatically via databaseService
-    // saveSnmpTraffic(); // DEPRECATED
 }
 
 // Start auto ping (always-on since toggle was removed)
@@ -1719,7 +1739,7 @@ function startAutoPing() {
         }
     }, PROBE_INTERVAL);
 
-    console.log(`🔄 Auto-ping started (every ${PROBE_INTERVAL / 1000} seconds, ${PROBE_DOWN_COUNT} failures to mark offline)`);
+    console.log(`?? Auto-ping started (every ${PROBE_INTERVAL / 1000} seconds, ${PROBE_DOWN_COUNT} failures to mark offline)`);
 }
 
 // Stop auto ping
@@ -1728,7 +1748,7 @@ function stopAutoPing() {
         clearInterval(autoPingInterval);
         autoPingInterval = null;
     }
-    console.log('â¹ï¸ Auto-ping stopped');
+    console.log('⏹️ Auto-ping stopped');
 }
 
 // SSE endpoint for real-time updates (SECURED)
@@ -1745,12 +1765,12 @@ app.get('/api/events', requireAuth, (req, res) => {
 
     // Add client to list
     sseClients.push(res);
-    console.log(`ðŸ“¡ Client connected (User: ${req.session.userId}). Total clients: ${sseClients.length}`);
+    console.log(`📡 Client connected (User: ${req.session.userId}). Total clients: ${sseClients.length}`);
 
     // Remove client on disconnect
     req.on('close', () => {
         sseClients = sseClients.filter(client => client !== res);
-        console.log(`ðŸ“¡ Client disconnected. Total clients: ${sseClients.length}`);
+        console.log(`📡 Client disconnected. Total clients: ${sseClients.length}`);
     });
 });
 
@@ -2591,7 +2611,7 @@ app.post('/api/push/subscribe', requireAuth, (req, res) => {
                 createdAt: new Date().toISOString()
             });
             savePushSubscriptions();
-            console.log(`ðŸ“± New push subscription added. Total: ${pushSubscriptions.length}`);
+            console.log(`📱 New push subscription added. Total: ${pushSubscriptions.length}`);
         }
 
         res.json({ success: true, message: 'Subscribed to push notifications' });
@@ -2617,7 +2637,7 @@ app.post('/api/push/unsubscribe', requireAuth, (req, res) => {
 
         if (pushSubscriptions.length < initialLength) {
             savePushSubscriptions();
-            console.log(`ðŸ“± Push subscription removed. Total: ${pushSubscriptions.length}`);
+            console.log(`📱 Push subscription removed. Total: ${pushSubscriptions.length}`);
         }
 
         res.json({ success: true, message: 'Unsubscribed from push notifications' });
@@ -2647,7 +2667,7 @@ app.post('/api/push/test', requireAuth, async (req, res) => {
         }
 
         await sendPushNotificationToAll({
-            title: 'ðŸ”” Test Notification',
+            title: '🔔 Test Notification',
             body: 'Push notifications are working!',
             tag: 'test-notification'
         });
@@ -3234,11 +3254,11 @@ async function pollSnmpTraffic() {
 
 function startSnmpPolling() {
     setInterval(pollSnmpTraffic, 5000); // 5 seconds
-    console.log('ðŸ“¡ SNMP Polling started (SQLite storage)');
+    console.log('📡 SNMP Polling started (SQLite storage)');
 }
 
 app.listen(PORT, () => {
-    console.log(`ðŸŒ Network Monitor running at http://localhost:${PORT}`);
+    console.log(`🌐 Network Monitor running at http://localhost:${PORT}`);
     // Start auto-ping by default
     startAutoPing();
 
