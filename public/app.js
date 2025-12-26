@@ -809,12 +809,12 @@ async function addHost(host, name, latitude = null, longitude = null, cid = null
     }
 }
 
-async function updateHost(id, host, name, cid = null, latitude = null, longitude = null, groupId = null, snmpEnabled = false, snmpCommunity = null, snmpVersion = null, snmpInterface = null) {
+async function updateHost(id, host, name, cid = null, latitude = null, longitude = null, groupId = null, snmpEnabled = false, snmpCommunity = null, snmpVersion = null, snmpInterface = null, snmpInterfaceName = null) {
     try {
         const response = await fetch(`${API_BASE}/api/hosts/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ host, name, cid, latitude, longitude, groupId, snmpEnabled, snmpCommunity, snmpVersion, snmpInterface })
+            body: JSON.stringify({ host, name, cid, latitude, longitude, groupId, snmpEnabled, snmpCommunity, snmpVersion, snmpInterface, snmpInterfaceName })
         });
         const data = await response.json();
         if (!response.ok) {
@@ -2518,15 +2518,17 @@ async function handleEditHost() {
     let snmpCommunity = null;
     let snmpVersion = null;
     let snmpInterface = null;
+    let snmpInterfaceName = null;
 
     if (snmpEnabled) {
         snmpCommunity = document.getElementById('editSnmpCommunity')?.value.trim() || 'public';
         snmpVersion = document.getElementById('editSnmpVersion')?.value || '2c';
         snmpInterface = document.getElementById('editSnmpInterface')?.value || null;
+        snmpInterfaceName = document.getElementById('editSnmpInterfaceName')?.value || null;
     }
 
     try {
-        await updateHost(id, host, name, cid, latitude, longitude, groupId, snmpEnabled, snmpCommunity, snmpVersion, snmpInterface);
+        await updateHost(id, host, name, cid, latitude, longitude, groupId, snmpEnabled, snmpCommunity, snmpVersion, snmpInterface, snmpInterfaceName);
         hideModal(elements.editHostModal);
 
         showNotification('Host berhasil diperbarui!', 'success');
@@ -6402,7 +6404,7 @@ function initSnmpEventHandlers() {
             select.addEventListener('change', (e) => {
                 const selectedOpt = select.options[select.selectedIndex];
                 const nameInput = document.getElementById('editSnmpInterfaceName');
-                if (nameInput) nameInput.value = selectedOpt.textContent;
+                if (nameInput) nameInput.value = selectedOpt.dataset.name || selectedOpt.textContent;
             });
         }
     }
