@@ -5,7 +5,10 @@
     "main": "server.js",
     "scripts": {
         "start": "node server.js",
-        "dev": "node server.js"
+        "dev": "node server.js",
+        "test": "jest --coverage",
+        "test:watch": "jest --watch",
+        "test:e2e": "jest --config jest.e2e.config.js"
     },
     "dependencies": {
         "archiver": "^7.0.1",
@@ -24,5 +27,22 @@
         "ping": "^0.4.4",
         "web-push": "^3.6.7",
         "xlsx": "^0.18.5"
+    },
+    "devDependencies": {
+        "jest": "^29.7.0",
+        "puppeteer": "^21.11.0",
+        "supertest": "^6.3.4"
+    },
+    "jest": {
+        "testEnvironment": "node",
+        "testMatch": [
+            "**/tests/**/*.test.js"
+        ],
+        "collectCoverageFrom": [
+            "services/**/*.js",
+            "routes/**/*.js"
+        ],
+        "coverageDirectory": "coverage",
+        "verbose": true
     }
 }
