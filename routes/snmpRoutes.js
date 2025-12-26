@@ -40,10 +40,60 @@ function createSnmpRoutes(deps) {
     });
 
     // GET /api/hosts/:id/snmp/history - Get SNMP Traffic History (from SQLite)
+    // Supports query params: period (1h, 6h, 24h, 7d, 30d), from, to (ISO timestamps)
     router.get('/:id/snmp/history', middleware.requireAuth, (req, res) => {
         const hostId = req.params.id;
-        const history = databaseService.getTrafficHistory(hostId, 500);
-        res.json({ history });
+        const { period, from, to } = req.query;
+
+        // Calculate time range based on period or from/to
+        let fromTime, toTime = Date.now();
+
+        if (from && to) {
+            // Manual date range
+            fromTime = new Date(from).getTime();
+            toTime = new Date(to).getTime();
+        } else {
+            // Preset periods
+            const periodMap = {
+                '1h': 60 * 60 * 1000,
+                '6h': 6 * 60 * 60 * 1000,
+                '24h': 24 * 60 * 60 * 1000,
+                '7d': 7 * 24 * 60 * 60 * 1000,
+                '30d': 30 * 24 * 60 * 60 * 1000
+            };
+            const duration = periodMap[period] || periodMap['24h']; // Default to 24h
+            fromTime = toTime - duration;
+        }
+
+        // Get filtered traffic history
+        const history = databaseService.getTrafficHistoryByTimeRange(hostId, fromTime, toTime);
+
+        // Calculate statistics
+        let stats = {
+            inbound: { current: 0, average: 0, maximum: 0 },
+            outbound: { current: 0, average: 0, maximum: 0 }
+        };
+
+        if (history.length > 0) {
+            const inValues = history.map(h => h.traffic_in || 0);
+            const outValues = history.map(h => h.traffic_out || 0);
+
+            stats.inbound.current = inValues[inValues.length - 1];
+            stats.inbound.average = inValues.reduce((a, b) => a + b, 0) / inValues.length;
+            stats.inbound.maximum = Math.max(...inValues);
+
+            stats.outbound.current = outValues[outValues.length - 1];
+            stats.outbound.average = outValues.reduce((a, b) => a + b, 0) / outValues.length;
+            stats.outbound.maximum = Math.max(...outValues);
+        }
+
+        res.json({
+            history,
+            stats,
+            period: period || '24h',
+            from: new Date(fromTime).toISOString(),
+            to: new Date(toTime).toISOString()
+        });
     });
 
     return router;

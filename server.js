@@ -1473,8 +1473,10 @@ async function autoPingAllHosts() {
         } else if (hostFailureCount[hostData.id] >= PROBE_DOWN_COUNT) {
             newStatus = 'offline';
         } else {
-            // Keep previous status during failure accumulation (default to online if unknown)
-            newStatus = previousStatus === 'offline' ? 'offline' : 'online';
+            // Keep previous status during failure accumulation
+            // If unknown/new host, stay unknown until we have definitive result
+            // This prevents false "online" status flicker before going offline
+            newStatus = previousStatus;
         }
 
         // DEBUG: Log all status information

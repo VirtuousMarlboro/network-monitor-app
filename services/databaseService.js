@@ -348,6 +348,24 @@ function cleanupTrafficHistory(hostId, keepCount = 2880) {
     }
 }
 
+/**
+ * Get traffic history for a host within a time range
+ */
+function getTrafficHistoryByTimeRange(hostId, fromTime, toTime) {
+    try {
+        const stmt = db.prepare(`
+            SELECT timestamp, in_octets as inOctets, out_octets as outOctets, traffic_in, traffic_out
+            FROM traffic_history
+            WHERE host_id = ? AND timestamp >= ? AND timestamp <= ?
+            ORDER BY timestamp ASC
+        `);
+        return stmt.all(hostId, fromTime, toTime);
+    } catch (err) {
+        console.error('Error getting traffic history by time range:', err.message);
+        return [];
+    }
+}
+
 // ========================================
 // Logs Operations
 // ========================================
@@ -896,6 +914,7 @@ module.exports = {
     // Traffic
     storeTrafficEntry,
     getTrafficHistory,
+    getTrafficHistoryByTimeRange,
     getLastTrafficEntry,
     cleanupTrafficHistory,
     // Logs

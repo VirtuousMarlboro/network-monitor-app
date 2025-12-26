@@ -1442,26 +1442,85 @@
         </div>
     </div>
 
-    <!-- Traffic Graph Modal -->
+    <!-- Traffic Graph Modal (Cacti-Style) -->
     <div class="modal-overlay" id="trafficModal">
-        <div class="modal modal-lg">
+        <div class="modal modal-xl">
             <div class="modal-header">
                 <h3>Traffic Monitor - <span id="trafficHostName"></span></h3>
                 <button class="modal-close" id="closeTrafficModalBtn">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="traffic-stats-row">
-                    <div class="traffic-stat">
-                        <span class="label">Inbound:</span>
-                        <span class="value in" id="trafficInValue">0 bps</span>
+                <!-- Time Filter Toolbar -->
+                <div class="traffic-toolbar">
+                    <div class="traffic-filter-group">
+                        <label>Presets:</label>
+                        <select id="trafficPeriodSelect" class="form-control form-control-sm">
+                            <option value="1h">Last 1 Hour</option>
+                            <option value="6h">Last 6 Hours</option>
+                            <option value="24h" selected>Last Day</option>
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                        </select>
                     </div>
-                    <div class="traffic-stat">
-                        <span class="label">Outbound:</span>
-                        <span class="value out" id="trafficOutValue">0 bps</span>
+                    <div class="traffic-filter-group">
+                        <label>From:</label>
+                        <input type="datetime-local" id="trafficFromDate" class="form-control form-control-sm">
+                    </div>
+                    <div class="traffic-filter-group">
+                        <label>To:</label>
+                        <input type="datetime-local" id="trafficToDate" class="form-control form-control-sm">
+                    </div>
+                    <div class="traffic-nav-group">
+                        <button class="btn btn-ghost btn-sm" id="trafficPrevBtn" title="Previous Period">◀</button>
+                        <button class="btn btn-ghost btn-sm" id="trafficNextBtn" title="Next Period">▶</button>
+                        <button class="btn btn-primary btn-sm" id="trafficApplyBtn">Apply</button>
                     </div>
                 </div>
-                <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+
+                <!-- Chart Container -->
+                <div class="chart-container" style="position: relative; height: 350px; width: 100%;">
                     <canvas id="trafficChart"></canvas>
+                </div>
+
+                <!-- Statistics Display (Cacti-Style) -->
+                <div class="traffic-stats-grid">
+                    <div class="traffic-legend-row inbound">
+                        <span class="traffic-legend-color" style="background: #10b981;"></span>
+                        <span class="traffic-legend-label">Inbound</span>
+                        <div class="traffic-stat-item">
+                            <span class="stat-label">Current:</span>
+                            <span class="stat-value" id="trafficInCurrent">0 Mbps</span>
+                        </div>
+                        <div class="traffic-stat-item">
+                            <span class="stat-label">Average:</span>
+                            <span class="stat-value" id="trafficInAverage">0 Mbps</span>
+                        </div>
+                        <div class="traffic-stat-item">
+                            <span class="stat-label">Maximum:</span>
+                            <span class="stat-value" id="trafficInMaximum">0 Mbps</span>
+                        </div>
+                    </div>
+                    <div class="traffic-legend-row outbound">
+                        <span class="traffic-legend-color" style="background: #3b82f6;"></span>
+                        <span class="traffic-legend-label">Outbound</span>
+                        <div class="traffic-stat-item">
+                            <span class="stat-label">Current:</span>
+                            <span class="stat-value" id="trafficOutCurrent">0 Mbps</span>
+                        </div>
+                        <div class="traffic-stat-item">
+                            <span class="stat-label">Average:</span>
+                            <span class="stat-value" id="trafficOutAverage">0 Mbps</span>
+                        </div>
+                        <div class="traffic-stat-item">
+                            <span class="stat-label">Maximum:</span>
+                            <span class="stat-value" id="trafficOutMaximum">0 Mbps</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time Range Display -->
+                <div class="traffic-time-range">
+                    <span id="trafficTimeRangeDisplay">From: - To: -</span>
                 </div>
             </div>
         </div>
@@ -1473,7 +1532,9 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Leaflet MarkerCluster JS -->
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-    <script src="app.js?v=2.7"></script>
+    <!-- Floating Windows Manager -->
+    <script src="js/floating-windows.js"></script>
+    <script src="app.js?v=2.8"></script>
 </body>
 
 </html>

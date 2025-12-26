@@ -4867,3 +4867,422 @@ textarea:focus {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* ========================================
+   Floating Windows (Ping/Traceroute)
+   ======================================== */
+
+#floatingWindowsContainer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.floating-window {
+    position: absolute;
+    width: 550px;
+    height: 450px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg), 0 0 40px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+}
+
+.floating-window:hover {
+    box-shadow: var(--shadow-lg), 0 0 60px rgba(124, 58, 237, 0.15);
+}
+
+.floating-window.dragging {
+    opacity: 0.9;
+    cursor: grabbing;
+    box-shadow: var(--shadow-lg), 0 0 80px rgba(124, 58, 237, 0.25);
+}
+
+.floating-window.minimized {
+    display: none;
+}
+
+/* Floating Window Header */
+.floating-window-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    cursor: grab;
+    user-select: none;
+}
+
+.floating-window-header:active {
+    cursor: grabbing;
+}
+
+.floating-window-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.floating-window-icon {
+    font-size: 1.1rem;
+}
+
+.floating-window-title-text {
+    max-width: 380px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.floating-window-controls {
+    display: flex;
+    gap: 6px;
+}
+
+.floating-window-btn {
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.floating-window-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.1);
+}
+
+.floating-window-close:hover {
+    background: var(--danger);
+}
+
+/* Floating Window Body */
+.floating-window-body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.floating-window-body .terminal-container {
+    flex: 1;
+    overflow: hidden;
+    margin: 0;
+    border-radius: 0;
+}
+
+.floating-window-body .terminal-output {
+    height: 100%;
+    overflow-y: auto;
+    padding: 16px;
+    margin: 0;
+    background: #0d1117;
+    color: #58a6ff;
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre;
+}
+
+.floating-window-body .terminal-line {
+    display: block;
+    color: #58a6ff;
+}
+
+.floating-window-body .terminal-error {
+    display: block;
+    color: var(--danger);
+}
+
+/* Floating Window Footer */
+.floating-window-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: var(--bg-tertiary);
+    border-top: 1px solid var(--border-color);
+}
+
+.floating-window-status {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.floating-window-stop {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+}
+
+/* Minimized Windows Bar */
+.minimized-windows-bar {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    background: var(--bg-card);
+    backdrop-filter: var(--blur-md);
+    -webkit-backdrop-filter: var(--blur-md);
+    padding: 8px 12px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+    z-index: 1001;
+    max-width: 90%;
+    overflow-x: auto;
+}
+
+.minimized-windows-bar:empty {
+    display: none;
+}
+
+.minimized-window-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.minimized-window-item:hover {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.minimized-window-icon {
+    font-size: 1rem;
+}
+
+.minimized-window-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Floating Windows - Light Theme */
+[data-theme="light"] .floating-window {
+    background: var(--bg-secondary);
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .floating-window-body .terminal-output {
+    background: #f6f8fa;
+    color: #24292f;
+}
+
+[data-theme="light"] .floating-window-body .terminal-line {
+    color: #0550ae;
+}
+
+[data-theme="light"] .minimized-windows-bar {
+    background: white;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Floating Windows - Mobile Responsive */
+@media (max-width: 768px) {
+    .floating-window {
+        width: calc(100vw - 32px);
+        max-width: 400px;
+        left: 16px !important;
+        right: 16px;
+    }
+
+    .minimized-windows-bar {
+        bottom: 80px;
+        max-width: calc(100% - 32px);
+    }
+}
+
+/* ========================================
+   Traffic Modal (Cacti-Style)
+   ======================================== */
+
+.modal-xl {
+    max-width: 900px;
+    width: 95%;
+}
+
+/* Traffic Toolbar */
+.traffic-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+}
+
+.traffic-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.traffic-filter-group label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.traffic-filter-group .form-control-sm {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    min-width: 140px;
+}
+
+.traffic-nav-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.traffic-nav-group .btn-sm {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+}
+
+/* Traffic Statistics Grid (Cacti-Style) */
+.traffic-stats-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    margin-top: 16px;
+}
+
+.traffic-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.traffic-legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.traffic-legend-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    min-width: 80px;
+    color: var(--text-primary);
+}
+
+.traffic-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.traffic-stat-item .stat-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.traffic-stat-item .stat-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: 'Monaco', 'Consolas', monospace;
+}
+
+.traffic-legend-row.inbound .stat-value {
+    color: #10b981;
+}
+
+.traffic-legend-row.outbound .stat-value {
+    color: #3b82f6;
+}
+
+/* Traffic Time Range Display */
+.traffic-time-range {
+    text-align: center;
+    padding: 12px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: 16px;
+}
+
+/* Traffic Chart Enhanced Styling */
+.traffic-modal .chart-container {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: 16px;
+}
+
+/* Light Theme Adjustments */
+[data-theme="light"] .traffic-toolbar {
+    background: #f3f4f6;
+}
+
+[data-theme="light"] .traffic-stats-grid {
+    background: #f3f4f6;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .traffic-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .traffic-filter-group {
+        justify-content: space-between;
+    }
+
+    .traffic-nav-group {
+        margin-left: 0;
+        justify-content: flex-end;
+    }
+
+    .traffic-legend-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .traffic-stat-item {
+        width: 100%;
+        justify-content: space-between;
+        padding-left: 32px;
+    }
+}

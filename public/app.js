@@ -2278,55 +2278,56 @@ async function handlePingHost(e) {
         return;
     }
 
-    // Abort any existing ping stream
-    if (currentPingController) {
-        currentPingController.abort();
-    }
-    currentPingController = new AbortController();
-    const signal = currentPingController.signal;
-
-    // Open Modal
-    elements.pingHostName.textContent = hostData.host;
-    elements.pingOutput.textContent = `Initializing ping to ${hostData.host}...\n`;
-    showModal(elements.pingModal);
-
-    try {
-        const response = await fetch(`${API_BASE}/api/ping-stream`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ host: hostData.host }),
-            signal: signal,
-            credentials: 'include' // Include session cookies
-        });
-
-        // Check if response is ok
-        if (!response.ok) {
-            const errorText = await response.text();
-            elements.pingOutput.textContent += `\nError (${response.status}): ${errorText || response.statusText}`;
-            return;
+    // Use floating window instead of modal (supports multiple instances)
+    if (window.openPingWindow) {
+        openPingWindow(hostData.id, hostData.name, hostData.host);
+    } else {
+        // Fallback to old modal behavior if floating windows not loaded
+        if (currentPingController) {
+            currentPingController.abort();
         }
+        currentPingController = new AbortController();
+        const signal = currentPingController.signal;
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+        elements.pingHostName.textContent = hostData.host;
+        elements.pingOutput.textContent = `Initializing ping to ${hostData.host}...\n`;
+        showModal(elements.pingModal);
 
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            const text = decoder.decode(value);
-            elements.pingOutput.textContent += text;
-            // Use requestAnimationFrame for reliable auto-scroll after DOM update
-            requestAnimationFrame(() => {
-                elements.pingOutput.scrollTop = elements.pingOutput.scrollHeight;
+        try {
+            const response = await fetch(`${API_BASE}/api/ping-stream`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ host: hostData.host }),
+                signal: signal,
+                credentials: 'include'
             });
-        }
 
-    } catch (error) {
-        if (error.name !== 'AbortError') {
-            console.error('Ping error:', error);
-            elements.pingOutput.textContent += `\nError: ${error.message}`;
+            if (!response.ok) {
+                const errorText = await response.text();
+                elements.pingOutput.textContent += `\nError (${response.status}): ${errorText || response.statusText}`;
+                return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                const text = decoder.decode(value);
+                elements.pingOutput.textContent += text;
+                requestAnimationFrame(() => {
+                    elements.pingOutput.scrollTop = elements.pingOutput.scrollHeight;
+                });
+            }
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('Ping error:', error);
+                elements.pingOutput.textContent += `\nError: ${error.message}`;
+            }
+        } finally {
+            currentPingController = null;
         }
-    } finally {
-        currentPingController = null;
     }
 }
 
@@ -2337,56 +2338,60 @@ async function handleTraceroute(e) {
 
     if (!host) return;
 
-    // Abort any existing traceroute stream
-    if (currentTracerouteController) {
-        currentTracerouteController.abort();
-    }
-    currentTracerouteController = new AbortController();
-    const signal = currentTracerouteController.signal;
-
-    elements.tracerouteHostName.textContent = `${host.name} (${host.host})`;
-    elements.tracerouteOutput.textContent = 'Initializing traceroute to ' + host.host + '...\n';
-    elements.tracerouteOutput.classList.add('terminal-loading');
-
-    showModal(elements.tracerouteModal);
-
-    try {
-        const response = await fetch(`${API_BASE}/api/traceroute`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ host: host.host }),
-            signal: signal,
-            credentials: 'include' // Include session cookies
-        });
-
-        elements.tracerouteOutput.classList.remove('terminal-loading');
-
-        // Check if response is ok
-        if (!response.ok) {
-            const errorText = await response.text();
-            elements.tracerouteOutput.textContent += `\nError (${response.status}): ${errorText || response.statusText}`;
-            return;
+    // Use floating window instead of modal (supports multiple instances)
+    if (window.openTracerouteWindow) {
+        openTracerouteWindow(host.id, host.name, host.host);
+    } else {
+        // Fallback to old modal behavior if floating windows not loaded
+        if (currentTracerouteController) {
+            currentTracerouteController.abort();
         }
+        currentTracerouteController = new AbortController();
+        const signal = currentTracerouteController.signal;
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+        elements.tracerouteHostName.textContent = `${host.name} (${host.host})`;
+        elements.tracerouteOutput.textContent = 'Initializing traceroute to ' + host.host + '...\n';
+        elements.tracerouteOutput.classList.add('terminal-loading');
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const text = decoder.decode(value, { stream: true });
-            elements.tracerouteOutput.textContent += text;
-            elements.tracerouteOutput.scrollTop = elements.tracerouteOutput.scrollHeight;
+        showModal(elements.tracerouteModal);
+
+        try {
+            const response = await fetch(`${API_BASE}/api/traceroute`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ host: host.host }),
+                signal: signal,
+                credentials: 'include'
+            });
+
+            elements.tracerouteOutput.classList.remove('terminal-loading');
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                elements.tracerouteOutput.textContent += `\nError (${response.status}): ${errorText || response.statusText}`;
+                return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const text = decoder.decode(value, { stream: true });
+                elements.tracerouteOutput.textContent += text;
+                elements.tracerouteOutput.scrollTop = elements.tracerouteOutput.scrollHeight;
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.log('Traceroute stream aborted');
+            } else {
+                elements.tracerouteOutput.textContent += '\nError: ' + error.message;
+            }
+            elements.tracerouteOutput.classList.remove('terminal-loading');
+        } finally {
+            currentTracerouteController = null;
         }
-    } catch (error) {
-        if (error.name === 'AbortError') {
-            console.log('Traceroute stream aborted');
-        } else {
-            elements.tracerouteOutput.textContent += '\nError: ' + error.message;
-        }
-        elements.tracerouteOutput.classList.remove('terminal-loading');
-    } finally {
-        currentTracerouteController = null;
     }
 }
 
@@ -6066,24 +6071,34 @@ async function handleScanInterfaces() {
     }
 }
 
+// Traffic modal state
+let currentTrafficPeriod = '24h';
+let currentTrafficFromDate = null;
+let currentTrafficToDate = null;
+
 async function openTrafficModal(hostId) {
     const host = cachedHosts.find(h => h.id === hostId);
     if (!host) return;
 
     currentTrafficHostId = hostId;
+    currentTrafficPeriod = '24h';
     document.getElementById('trafficHostName').textContent = host.name;
+    document.getElementById('trafficPeriodSelect').value = '24h';
 
     showModal(document.getElementById('trafficModal'));
 
-    // Init chart
+    // Init chart with enhanced styling
     initTrafficChart();
+
+    // Initialize filter event handlers
+    initTrafficFilterHandlers();
 
     // Load initial data
     await loadTrafficData();
 
     // Start auto-refresh (every 30s)
     if (trafficUpdateInterval) clearInterval(trafficUpdateInterval);
-    trafficUpdateInterval = setInterval(loadTrafficData, 5000);
+    trafficUpdateInterval = setInterval(loadTrafficData, 30000);
 }
 
 function closeTrafficModal() {
@@ -6093,6 +6108,75 @@ function closeTrafficModal() {
     currentTrafficHostId = null;
 }
 
+function initTrafficFilterHandlers() {
+    const periodSelect = document.getElementById('trafficPeriodSelect');
+    const applyBtn = document.getElementById('trafficApplyBtn');
+    const prevBtn = document.getElementById('trafficPrevBtn');
+    const nextBtn = document.getElementById('trafficNextBtn');
+
+    if (periodSelect) {
+        periodSelect.onchange = () => {
+            currentTrafficPeriod = periodSelect.value;
+            currentTrafficFromDate = null;
+            currentTrafficToDate = null;
+            loadTrafficData();
+        };
+    }
+
+    if (applyBtn) {
+        applyBtn.onclick = () => {
+            const fromInput = document.getElementById('trafficFromDate');
+            const toInput = document.getElementById('trafficToDate');
+            if (fromInput.value && toInput.value) {
+                currentTrafficFromDate = new Date(fromInput.value).toISOString();
+                currentTrafficToDate = new Date(toInput.value).toISOString();
+                currentTrafficPeriod = null;
+                loadTrafficData();
+            }
+        };
+    }
+
+    if (prevBtn) {
+        prevBtn.onclick = () => navigateTrafficPeriod(-1);
+    }
+
+    if (nextBtn) {
+        nextBtn.onclick = () => navigateTrafficPeriod(1);
+    }
+}
+
+function navigateTrafficPeriod(direction) {
+    const periodDurations = {
+        '1h': 60 * 60 * 1000,
+        '6h': 6 * 60 * 60 * 1000,
+        '24h': 24 * 60 * 60 * 1000,
+        '7d': 7 * 24 * 60 * 60 * 1000,
+        '30d': 30 * 24 * 60 * 60 * 1000
+    };
+
+    const duration = periodDurations[currentTrafficPeriod] || periodDurations['24h'];
+    const now = Date.now();
+
+    if (!currentTrafficFromDate || !currentTrafficToDate) {
+        // Initialize based on current period
+        currentTrafficToDate = new Date(now).toISOString();
+        currentTrafficFromDate = new Date(now - duration).toISOString();
+    }
+
+    // Shift time range
+    const fromMs = new Date(currentTrafficFromDate).getTime() + (direction * duration);
+    const toMs = new Date(currentTrafficToDate).getTime() + (direction * duration);
+
+    // Don't allow future dates
+    if (toMs > now) return;
+
+    currentTrafficFromDate = new Date(fromMs).toISOString();
+    currentTrafficToDate = new Date(toMs).toISOString();
+    currentTrafficPeriod = null;
+
+    loadTrafficData();
+}
+
 function initTrafficChart() {
     const ctx = document.getElementById('trafficChart').getContext('2d');
 
@@ -6100,26 +6184,42 @@ function initTrafficChart() {
         trafficChartInstance.destroy();
     }
 
+    // Create gradient for inbound
+    const inboundGradient = ctx.createLinearGradient(0, 0, 0, 350);
+    inboundGradient.addColorStop(0, 'rgba(16, 185, 129, 0.6)');
+    inboundGradient.addColorStop(1, 'rgba(16, 185, 129, 0.05)');
+
+    // Create gradient for outbound
+    const outboundGradient = ctx.createLinearGradient(0, 0, 0, 350);
+    outboundGradient.addColorStop(0, 'rgba(59, 130, 246, 0.6)');
+    outboundGradient.addColorStop(1, 'rgba(59, 130, 246, 0.05)');
+
     trafficChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
             labels: [],
             datasets: [
                 {
-                    label: 'Inbound (Mbps)',
-                    borderColor: '#10b981', // Success color
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    label: 'Inbound',
+                    borderColor: '#10b981',
+                    backgroundColor: inboundGradient,
                     data: [],
                     fill: true,
-                    tension: 0.4
+                    tension: 0.3,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 4
                 },
                 {
-                    label: 'Outbound (Mbps)',
-                    borderColor: '#3b82f6', // Info color
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    label: 'Outbound',
+                    borderColor: '#3b82f6',
+                    backgroundColor: outboundGradient,
                     data: [],
                     fill: true,
-                    tension: 0.4
+                    tension: 0.3,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 4
                 }
             ]
         },
@@ -6132,89 +6232,156 @@ function initTrafficChart() {
             },
             plugins: {
                 legend: {
-                    labels: { color: '#9ca3af' }
+                    display: false // We use custom legend
                 },
                 tooltip: {
+                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                    titleColor: '#f3f4f6',
+                    bodyColor: '#d1d5db',
+                    borderColor: 'rgba(99, 102, 241, 0.3)',
+                    borderWidth: 1,
+                    padding: 12,
                     callbacks: {
                         label: function (context) {
-                            return context.dataset.label + ': ' + context.parsed.y + ' Mbps';
+                            return context.dataset.label + ': ' + formatTrafficValue(context.parsed.y);
                         }
                     }
                 }
             },
             scales: {
                 x: {
-                    ticks: { color: '#9ca3af' },
-                    grid: { color: '#374151' }
+                    ticks: {
+                        color: '#9ca3af',
+                        maxRotation: 45,
+                        maxTicksLimit: 12
+                    },
+                    grid: {
+                        color: 'rgba(55, 65, 81, 0.5)',
+                        drawBorder: false
+                    }
                 },
                 y: {
-                    ticks: { color: '#9ca3af' },
-                    grid: { color: '#374151' },
+                    ticks: {
+                        color: '#9ca3af',
+                        callback: function (value) {
+                            return formatTrafficValue(value);
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(55, 65, 81, 0.5)',
+                        drawBorder: false
+                    },
                     beginAtZero: true
                 }
             },
-            animation: false
+            animation: {
+                duration: 300
+            }
         }
     });
+}
+
+function formatTrafficValue(value) {
+    if (value >= 1000) {
+        return (value / 1000).toFixed(2) + ' Gbps';
+    } else if (value >= 1) {
+        return value.toFixed(2) + ' Mbps';
+    } else if (value >= 0.001) {
+        return (value * 1000).toFixed(2) + ' Kbps';
+    }
+    return '0 bps';
 }
 
 async function loadTrafficData() {
     if (!currentTrafficHostId) return;
 
     try {
-        // Add cache bust to prevent browser caching
-        const response = await fetch(`${API_BASE}/api/hosts/${currentTrafficHostId}/snmp/history?_=${Date.now()}`);
+        // Build query params
+        let queryParams = `_=${Date.now()}`;
+        if (currentTrafficFromDate && currentTrafficToDate) {
+            queryParams += `&from=${currentTrafficFromDate}&to=${currentTrafficToDate}`;
+        } else if (currentTrafficPeriod) {
+            queryParams += `&period=${currentTrafficPeriod}`;
+        }
+
+        const response = await fetch(`${API_BASE}/api/hosts/${currentTrafficHostId}/snmp/history?${queryParams}`);
         if (!response.ok) return;
 
         const data = await response.json();
-        // Handle both array (old) and object (new) response formats
-        let history = Array.isArray(data) ? data : (data.history || []);
+        const history = data.history || [];
+        const stats = data.stats || { inbound: {}, outbound: {} };
 
-        // Normalize data - handle both old format (inBps in bytes/sec) and new format (traffic_in in Mbps)
-        const displayHistory = history.slice(-100).map(h => {
-            let traffic_in = h.traffic_in || 0;
-            let traffic_out = h.traffic_out || 0;
+        // Normalize and limit data points for display
+        const maxPoints = 200;
+        const step = history.length > maxPoints ? Math.ceil(history.length / maxPoints) : 1;
+        const displayHistory = history.filter((_, i) => i % step === 0);
 
-            // If old format (inBps in bytes per second), convert to Mbps
-            // inBps values are typically large numbers like 138577818
-            if (h.inBps !== undefined && h.inBps > 0) {
-                traffic_in = (h.inBps * 8) / 1000000; // bytes/s * 8 bits / 1M = Mbps
+        // Format labels based on period - Cacti-style with round hours
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const labels = displayHistory.map(h => {
+            const date = new Date(h.timestamp);
+            const hh = date.getHours().toString().padStart(2, '0');
+            const mm = date.getMinutes().toString().padStart(2, '0');
+            const day = days[date.getDay()];
+            const dd = date.getDate();
+            const mon = date.getMonth() + 1;
+
+            if (currentTrafficPeriod === '1h') {
+                // 1 hour - just show HH:mm
+                return `${hh}:${mm}`;
+            } else if (currentTrafficPeriod === '6h') {
+                // 6 hours - show HH:mm
+                return `${hh}:${mm}`;
+            } else if (currentTrafficPeriod === '24h') {
+                // 24 hours - show Day HH:mm to distinguish crossing midnight
+                return `${day} ${hh}:${mm}`;
+            } else if (currentTrafficPeriod === '7d') {
+                // 7 days - show Day HH:00
+                return `${day} ${hh}:00`;
+            } else if (currentTrafficPeriod === '30d') {
+                // 30 days - show Day/Month
+                return `${dd}/${mon}`;
+            } else {
+                // Custom range - show Day HH:mm
+                return `${day} ${hh}:${mm}`;
             }
-            if (h.outBps !== undefined && h.outBps > 0) {
-                traffic_out = (h.outBps * 8) / 1000000;
-            }
-
-            return {
-                timestamp: h.timestamp,
-                traffic_in: traffic_in,
-                traffic_out: traffic_out
-            };
         });
 
-        if (displayHistory.length) {
-            console.log('[DEBUG] Frontend Traffic History:', displayHistory.slice(-3));
-        } else {
-            console.log('[DEBUG] No traffic history data available yet');
-        }
-
-        // Update Chart
-        const labels = displayHistory.map(h => new Date(h.timestamp).toLocaleTimeString());
-
+        // Update Chart with dynamic tick settings
         trafficChartInstance.data.labels = labels;
-        trafficChartInstance.data.datasets[0].data = displayHistory.map(h => parseFloat((h.traffic_in || 0).toFixed(2)));
-        trafficChartInstance.data.datasets[1].data = displayHistory.map(h => parseFloat((h.traffic_out || 0).toFixed(2)));
+        trafficChartInstance.data.datasets[0].data = displayHistory.map(h => h.traffic_in || 0);
+        trafficChartInstance.data.datasets[1].data = displayHistory.map(h => h.traffic_out || 0);
+
+        // Adjust maxTicksLimit based on period for cleaner display
+        let maxTicks = 8;
+        if (currentTrafficPeriod === '1h') maxTicks = 6;
+        else if (currentTrafficPeriod === '6h') maxTicks = 6;
+        else if (currentTrafficPeriod === '24h') maxTicks = 8;
+        else if (currentTrafficPeriod === '7d') maxTicks = 7;
+        else if (currentTrafficPeriod === '30d') maxTicks = 10;
+
+        trafficChartInstance.options.scales.x.ticks.maxTicksLimit = maxTicks;
         trafficChartInstance.update();
 
-        // Update Current Stats (Last Entry)
-        if (history.length > 0) {
-            const last = history[history.length - 1];
-            // Safe check for elements and handle undefined values
-            const inEl = document.querySelector('.traffic-stat .value.in');
-            const outEl = document.querySelector('.traffic-stat .value.out');
-            const trafficIn = (last.traffic_in !== undefined && last.traffic_in !== null) ? last.traffic_in.toFixed(2) : '0.00';
-            const trafficOut = (last.traffic_out !== undefined && last.traffic_out !== null) ? last.traffic_out.toFixed(2) : '0.00';
-            if (inEl) inEl.textContent = trafficIn + ' Mbps';
-            if (outEl) outEl.textContent = trafficOut + ' Mbps';
+        // Update Statistics
+        const setStatValue = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = formatTrafficValue(value || 0);
+        };
+
+        setStatValue('trafficInCurrent', stats.inbound.current);
+        setStatValue('trafficInAverage', stats.inbound.average);
+        setStatValue('trafficInMaximum', stats.inbound.maximum);
+        setStatValue('trafficOutCurrent', stats.outbound.current);
+        setStatValue('trafficOutAverage', stats.outbound.average);
+        setStatValue('trafficOutMaximum', stats.outbound.maximum);
+
+        // Update time range display
+        const timeRangeEl = document.getElementById('trafficTimeRangeDisplay');
+        if (timeRangeEl && data.from && data.to) {
+            const fromDate = new Date(data.from);
+            const toDate = new Date(data.to);
+            timeRangeEl.textContent = `From: ${fromDate.toLocaleString('id-ID')} To: ${toDate.toLocaleString('id-ID')}`;
         }
 
     } catch (e) {

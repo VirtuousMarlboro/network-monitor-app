@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dokumentasi Teknis - Network Monitor App</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #fff;
+        }
+
+        @media print {
+            body {
+                padding: 20px;
+                font-size: 11pt;
+            }
+
+            .page-break {
+                page-break-before: always;
+            }
+
+            h1,
+            h2,
+            h3 {
+                page-break-after: avoid;
+            }
+
+            table,
+            pre,
+            .mermaid {
+                page-break-inside: avoid;
+            }
+        }
+
+        h1 {
+            color: #1a56db;
+            border-bottom: 3px solid #1a56db;
+            padding-bottom: 10px;
+            font-size: 28pt;
+            text-align: center;
+        }
+
+        h2 {
+            color: #1e40af;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 8px;
+            margin-top: 40px;
+        }
+
+        h3 {
+            color: #374151;
+            margin-top: 25px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 10pt;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px 12px;
+            text-align: left;
+        }
+
+        th {
+            background: #f3f4f6;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        tr:nth-child(even) {
+            background: #f9fafb;
+        }
+
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 10pt;
+        }
+
+        pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        .mermaid {
+            text-align: center;
+            margin: 20px 0;
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .status-ok {
+            color: #059669;
+        }
+
+        .status-warn {
+            color: #d97706;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .summary-box {
+            background: #eff6ff;
+            border-left: 4px solid #1a56db;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .cover-page {
+            text-align: center;
+            padding: 100px 20px;
+            min-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .cover-page h1 {
+            font-size: 36pt;
+            margin-bottom: 20px;
+        }
+
+        .cover-page .subtitle {
+            font-size: 18pt;
+            color: #6b7280;
+            margin-bottom: 60px;
+        }
+
+        .cover-page .meta {
+            color: #9ca3af;
+            font-size: 12pt;
+        }
+
+        .toc {
+            background: #f9fafb;
+            padding: 20px 30px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+
+        .toc h2 {
+            margin-top: 0;
+            border: none;
+        }
+
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .toc li {
+            padding: 5px 0;
+            border-bottom: 1px dotted #ddd;
+        }
+
+        .toc a {
+            color: #1a56db;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Cover Page -->
+    <div class="cover-page">
+        <h1>Dokumentasi Teknis</h1>
+        <div class="subtitle">Network Monitor App</div>
+        <p style="font-size: 14pt; color: #4b5563;">
+            Aplikasi Monitoring Jaringan Real-time<br>
+            dengan Dukungan SNMP, Ticketing, dan Multi-channel Notifications
+        </p>
+        <div class="meta" style="margin-top: 80px;">
+            <p>Versi 1.0.0</p>
+            <p>Dibuat: 25 Desember 2025</p>
+            <p>Dikembangkan oleh: Muhammad Ilhaam Fadhiil</p>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Table of Contents -->
+    <div class="toc">
+        <h2>Daftar Isi</h2>
+        <ul>
+            <li><a href="#section1">1. Gambaran Umum Sistem</a></li>
+            <li><a href="#section2">2. Arsitektur Sistem</a></li>
+            <li><a href="#section3">3. Flowchart Sistem</a></li>
+            <li><a href="#section4">4. Spesifikasi API</a></li>
+            <li><a href="#section5">5. Prosedur Penggunaan</a></li>
+            <li><a href="#section6">6. Evaluasi UI: 8 Golden Rules</a></li>
+            <li><a href="#section7">7. Security Features</a></li>
+            <li><a href="#section8">8. Kesimpulan</a></li>
+        </ul>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 1 -->
+    <h2 id="section1">1. Gambaran Umum Sistem</h2>
+
+    <p><strong>Network Monitor App</strong> adalah aplikasi web untuk memantau perangkat jaringan secara real-time
+        menggunakan protokol <strong>ICMP Ping</strong> dan <strong>SNMP</strong>. Aplikasi ini menyediakan dashboard
+        monitoring, ticketing system, dan notifikasi multi-channel.</p>
+
+    <h3>Fitur Utama</h3>
+    <table>
+        <tr>
+            <th>Fitur</th>
+            <th>Deskripsi</th>
+        </tr>
+        <tr>
+            <td>✅ Real-time Monitoring</td>
+            <td>Ping otomatis setiap 10 detik dengan Server-Sent Events (SSE)</td>
+        </tr>
+        <tr>
+            <td>✅ SNMP Traffic Monitoring</td>
+            <td>Monitoring bandwidth interface dengan dukungan 32/64-bit counters</td>
+        </tr>
+        <tr>
+            <td>✅ Ticketing System</td>
+            <td>Auto-ticket untuk host down dengan delay 2 menit</td>
+        </tr>
+        <tr>
+            <td>✅ Multi-channel Notifications</td>
+            <td>Telegram, Push Notifications, Webhooks</td>
+        </tr>
+        <tr>
+            <td>✅ Geo-location Map</td>
+            <td>Peta interaktif dengan Leaflet.js</td>
+        </tr>
+        <tr>
+            <td>✅ Security Hardened</td>
+            <td>WAF, CSP, Rate Limiting, HTTPS, Session Management</td>
+        </tr>
+    </table>
+
+    <div class="page-break"></div>
+
+    <!-- Section 2 -->
+    <h2 id="section2">2. Arsitektur Sistem</h2>
+
+    <h3>2.1 Technology Stack</h3>
+    <table>
+        <tr>
+            <th>Layer</th>
+            <th>Teknologi</th>
+        </tr>
+        <tr>
+            <td>Backend</td>
+            <td>Node.js + Express.js</td>
+        </tr>
+        <tr>
+            <td>Database</td>
+            <td>SQLite (better-sqlite3) + JSON Files (backup)</td>
+        </tr>
+        <tr>
+            <td>Frontend</td>
+            <td>HTML5 + Alpine.js + Vanilla CSS</td>
+        </tr>
+        <tr>
+            <td>Maps</td>
+            <td>Leaflet.js + OpenStreetMap</td>
+        </tr>
+        <tr>
+            <td>Charts</td>
+            <td>Chart.js</td>
+        </tr>
+        <tr>
+            <td>Security</td>
+            <td>Helmet, bcrypt, express-rate-limit, WAF custom</td>
+        </tr>
+    </table>
+
+    <h3>2.2 Diagram Arsitektur</h3>
+    <div class="mermaid">
+        graph TB
+        subgraph Frontend
+        UI[HTML/CSS/JS]
+        Alpine[Alpine.js Store]
+        Leaflet[Leaflet Maps]
+        end
+
+        subgraph Backend
+        Express[Express Server]
+        Routes[Modular Routes]
+        Services[Services Layer]
+        WAF[WAF Middleware]
+        SSE[SSE Broadcaster]
+        end
+
+        subgraph DataLayer
+        SQLite[(SQLite DB)]
+        JSON[(JSON Files)]
+        end
+
+        subgraph External
+        Telegram[Telegram API]
+        SNMP[SNMP Devices]
+        Push[Push Service]
+        end
+
+        UI --> Express
+        Express --> WAF --> Routes
+        Routes --> Services
+        Services --> SQLite
+        Services --> JSON
+        Services --> SNMP
+        Express --> Telegram
+        Express --> Push
+        SSE --> UI
+    </div>
+
+    <h3>2.3 Struktur Direktori</h3>
+    <pre><code>network-monitor-app/
+├── server.js              # Main server (3276 lines)
+├── package.json           # Dependencies
+├── .env                   # Environment variables
+├── routes/                # Modular routes
+│   ├── authRoutes.js      # Login/logout/session
+│   ├── hostRoutes.js      # CRUD hosts
+│   ├── ticketRoutes.js    # Ticketing system
+│   ├── userRoutes.js      # User management
+│   ├── snmpRoutes.js      # SNMP endpoints
+│   └── settingsRoutes.js  # App settings
+├── services/              # Business logic
+│   ├── databaseService.js # SQLite operations
+│   ├── snmpService.js     # SNMP polling
+│   ├── wafService.js      # Web Application Firewall
+│   └── backupService.js   # Data backup
+├── middleware/
+│   └── auth.js            # Authentication middleware
+├── public/                # Frontend assets
+│   ├── index.html         # Main dashboard
+│   ├── login.html         # Login page
+│   ├── app.js             # Frontend logic (6323 lines)
+│   ├── styles.css         # Styling
+│   └── js/                # Alpine components
+└── data/                  # Persistent data (JSON)</code></pre>
+
+    <div class="page-break"></div>
+
+    <!-- Section 3 -->
+    <h2 id="section3">3. Flowchart Sistem</h2>
+
+    <h3>3.1 Flow Autentikasi</h3>
+    <div class="mermaid">
+        flowchart TD
+        A[User Akses Aplikasi] --> B{Session Valid?}
+        B -->|Ya| C[Dashboard]
+        B -->|Tidak| D[Halaman Login]
+        D --> E[Input Username/Password]
+        E --> F{Validasi Kredensial}
+        F -->|Gagal| G[Error: Invalid Credentials]
+        G --> D
+        F -->|Sukses| H{Password Pertama?}
+        H -->|Ya| I[Force Change Password]
+        I --> J[Input Password Baru]
+        J --> K{Password Kuat?}
+        K -->|Tidak| L[Error: Password Lemah]
+        L --> J
+        K -->|Ya| C
+        H -->|Tidak| C
+    </div>
+
+    <h3>3.2 Flow Monitoring Host</h3>
+    <div class="mermaid">
+        flowchart TD
+        A[Auto Ping Interval: 10s] --> B[Loop Semua Host]
+        B --> C[Ping Host 3x Attempts]
+        C --> D{Minimal 1 Sukses?}
+        D -->|Ya| E[Status: ONLINE]
+        D -->|Tidak| F[Increment Failure Counter]
+        F --> G{Failure >= 2?}
+        G -->|Tidak| H[Status: Tetap]
+        G -->|Ya| I[Status: OFFLINE]
+        I --> J{Sudah Down > 2 Menit?}
+        J -->|Ya| K{Ticket Sudah Ada?}
+        K -->|Tidak| L[Buat Auto Ticket]
+        L --> M[Kirim Notifikasi]
+        K -->|Ya| N[Skip Ticket]
+        J -->|Tidak| N
+        E --> O[Reset Failure Counter]
+        O --> P{Sebelumnya Offline?}
+        P -->|Ya| Q[Kirim Notifikasi UP]
+        P -->|Tidak| R[Broadcast SSE Update]
+        Q --> R
+        N --> R
+        M --> R
+    </div>
+
+    <div class="page-break"></div>
+
+    <h3>3.3 Flow Ticketing</h3>
+    <div class="mermaid">
+        flowchart TD
+        A[Ticket Created] --> B{Source?}
+        B -->|Auto| C[ID: AUTO-YYYYMMDD-XXXX]
+        B -->|Manual| D[ID: TKT-YYYYMMDD-XXXX]
+        C --> E[Status: Open]
+        D --> E
+        E --> F[Broadcast SSE]
+        F --> G[User Response?]
+        G -->|Comment| H[Set First Response Time]
+        G -->|Status Change| I{New Status?}
+        I -->|In Progress| H
+        I -->|Resolved| J[Set Resolved Time]
+        I -->|Pending| K[Update Status Only]
+        H --> L[Save and Broadcast]
+        J --> L
+        K --> L
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 4 -->
+    <h2 id="section4">4. Spesifikasi API</h2>
+
+    <h3>4.1 Autentikasi</h3>
+    <table>
+        <tr>
+            <th>Endpoint</th>
+            <th>Method</th>
+            <th>Deskripsi</th>
+            <th>Auth</th>
+        </tr>
+        <tr>
+            <td><code>/api/login</code></td>
+            <td>POST</td>
+            <td>Login user</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td><code>/api/logout</code></td>
+            <td>POST</td>
+            <td>Logout user</td>
+            <td>✅</td>
+        </tr>
+        <tr>
+            <td><code>/api/me</code></td>
+            <td>GET</td>
+            <td>Ambil user info</td>
+            <td>✅</td>
+        </tr>
+        <tr>
+            <td><code>/api/change-password</code></td>
+            <td>PUT</td>
+            <td>Ganti password</td>
+            <td>✅</td>
+        </tr>
+    </table>
+
+    <h3>4.2 Host Management</h3>
+    <table>
+        <tr>
+            <th>Endpoint</th>
+            <th>Method</th>
+            <th>Deskripsi</th>
+            <th>Auth</th>
+        </tr>
+        <tr>
+            <td><code>/api/hosts</code></td>
+            <td>GET</td>
+            <td>List semua host</td>
+            <td>✅</td>
+        </tr>
+        <tr>
+            <td><code>/api/hosts</code></td>
+            <td>POST</td>
+            <td>Tambah host baru</td>
+            <td>✅</td>
+        </tr>
+        <tr>
+            <td><code>/api/hosts/:id</code></td>
+            <td>PUT</td>
+            <td>Update host</td>
+            <td>✅</td>
+        </tr>
+        <tr>
+            <td><code>/api/hosts/:id</code></td>
+            <td>DELETE</td>
+            <td>Hapus host</td>
+            <td>✅</td>
+        </tr>
+        <tr>
+            <td><code>/api/hosts/:id/snmp/scan</code></td>
+            <td>GET</td>
+            <td>Scan interface SNMP</td>
+            <td>✅</td>
+        </tr>
+        <tr>
+            <td><code>/api/hosts/:id/snmp/history</code></td>
+            <td>GET</td>
+            <td>Ambil riwayat traffic</td>
+            <td>✅</td>
+        </tr>
+    </table>
+
+    <h3>4.3 Ticketing</h3>
+    <table>
+        <tr>
+            <th>Endpoint</th>
+            <th>Method</th>
+            <th>Deskripsi</th>
+            <th>Auth</th>
+        </tr>
+        <tr>
+            <td><code>/api/tickets</code></td>
+            <td>GET</td>
+            <td>List semua tiket</td>
+            <td>✅</td>
+        </tr>
+        <tr>
+            <td><code>/api/tickets</code></td>
+            <td>POST</td>
+            <td>Buat tiket manual</td>
+            <td>✅</td>
+        </tr>
+        <tr>
+            <td><code>/api/tickets/:id</code></td>
+            <td>PUT</td>
+            <td>Update tiket</td>
+            <td>✅</td>
+        </tr>
+        <tr>
+            <td><code>/api/tickets/:id</code></td>
+            <td>DELETE</td>
+            <td>Hapus tiket</td>
+            <td>✅</td>
+        </tr>
+        <tr>
+            <td><code>/api/tickets/:id/comments</code></td>
+            <td>POST</td>
+            <td>Tambah komentar</td>
+            <td>✅</td>
+        </tr>
+        <tr>
+            <td><code>/api/tickets/export</code></td>
+            <td>GET</td>
+            <td>Export ke Excel</td>
+            <td>✅</td>
+        </tr>
+    </table>
+
+    <h3>4.4 Real-time Events (SSE)</h3>
+    <table>
+        <tr>
+            <th>Event</th>
+            <th>Data</th>
+            <th>Deskripsi</th>
+        </tr>
+        <tr>
+            <td><code>hosts-update</code></td>
+            <td>Array hosts</td>
+            <td>Update status semua host</td>
+        </tr>
+        <tr>
+            <td><code>alerts</code></td>
+            <td>Array alerts</td>
+            <td>Notifikasi UP/DOWN</td>
+        </tr>
+        <tr>
+            <td><code>log-update</code></td>
+            <td>Log entry</td>
+            <td>Status change log</td>
+        </tr>
+        <tr>
+            <td><code>ticket-created</code></td>
+            <td>Ticket</td>
+            <td>Tiket baru dibuat</td>
+        </tr>
+        <tr>
+            <td><code>ticket-updated</code></td>
+            <td>Ticket</td>
+            <td>Tiket diupdate</td>
+        </tr>
+    </table>
+
+    <div class="page-break"></div>
+
+    <!-- Section 5 -->
+    <h2 id="section5">5. Prosedur Penggunaan</h2>
+
+    <h3>5.1 Instalasi & Konfigurasi</h3>
+    <pre><code># 1. Clone repository
+git clone &lt;repository-url&gt;
+cd network-monitor-app
+
+# 2. Install dependencies
+npm install
+
+# 3. Setup environment (.env)
+cp .env.example .env
+# Edit .env, set SESSION_SECRET minimal 32 karakter
+
+# 4. Jalankan aplikasi
+npm start
+# Akses: http://localhost:3000</code></pre>
+
+    <h3>5.2 Login Pertama Kali</h3>
+    <ol>
+        <li>Buka browser ke <code>http://localhost:3000</code></li>
+        <li>Login dengan kredensial default: <code>admin</code> / <code>ChangeThisStrongPassword123!</code></li>
+        <li><strong>Wajib ganti password</strong> dengan minimal 8 karakter (huruf besar, kecil, angka, simbol)</li>
+    </ol>
+
+    <h3>5.3 Menambah Host</h3>
+    <ol>
+        <li>Klik tombol <strong>"+ Host"</strong> di header</li>
+        <li>Isi form:
+            <ul>
+                <li><strong>IP/Hostname</strong>: Alamat target (contoh: <code>192.168.1.1</code>)</li>
+                <li><strong>Nama</strong>: Label deskriptif</li>
+                <li><strong>CID</strong>: Customer ID (opsional)</li>
+                <li><strong>Grup</strong>: Pilih group (opsional)</li>
+                <li><strong>Lokasi</strong>: Toggle untuk menambah koordinat peta</li>
+            </ul>
+        </li>
+        <li>Klik <strong>"Simpan"</strong></li>
+    </ol>
+
+    <h3>5.4 Mengaktifkan SNMP Monitoring</h3>
+    <ol>
+        <li>Edit host yang sudah ada</li>
+        <li>Enable <strong>SNMP Monitoring</strong></li>
+        <li>Set <strong>Community String</strong> (default: <code>public</code>)</li>
+        <li>Pilih <strong>SNMP Version</strong> (2c recommended)</li>
+        <li>Klik <strong>Scan Interface</strong> untuk auto-detect</li>
+        <li>Pilih interface untuk monitoring</li>
+        <li>Simpan perubahan</li>
+    </ol>
+
+    <h3>5.5 Mengelola Tiket</h3>
+    <ol>
+        <li>Tab <strong>"Tiket"</strong> untuk melihat semua tiket</li>
+        <li>Tiket otomatis dibuat jika host down > 2 menit</li>
+        <li>Filter berdasarkan status/host/tanggal</li>
+        <li>Klik tiket untuk update status atau tambah komentar</li>
+        <li>Export ke Excel dengan tombol <strong>"Export"</strong></li>
+    </ol>
+
+    <h3>5.6 Konfigurasi Notifikasi Telegram</h3>
+    <ol>
+        <li>Buat bot Telegram via @BotFather</li>
+        <li>Dapatkan <strong>Bot Token</strong> dan <strong>Chat ID</strong></li>
+        <li>Masuk ke Settings (ikon gear) > Tab Telegram</li>
+        <li>Masukkan token dan chat ID</li>
+        <li>Klik <strong>"Test"</strong> untuk verifikasi</li>
+    </ol>
+
+    <div class="page-break"></div>
+
+    <!-- Section 6 -->
+    <h2 id="section6">6. Evaluasi UI: 8 Golden Rules</h2>
+
+    <div class="summary-box">
+        <strong>Ben Shneiderman's 8 Golden Rules of Interface Design</strong><br>
+        Evaluasi UI berdasarkan prinsip desain antarmuka yang diakui secara internasional.
+    </div>
+
+    <table>
+        <tr>
+            <th>#</th>
+            <th>Rule</th>
+            <th>Implementasi</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>1</td>
+            <td><strong>Strive for Consistency</strong></td>
+            <td>Desain konsisten: warna, ikon, button styles sama di seluruh aplikasi. Navigasi tab konsisten.</td>
+            <td><span class="badge badge-success">✅ Terpenuhi</span></td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td><strong>Seek Universal Usability</strong></td>
+            <td>Responsive design, dark/light mode, keyboard shortcuts, accessible color contrast. PWA support.</td>
+            <td><span class="badge badge-success">✅ Terpenuhi</span></td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td><strong>Offer Informative Feedback</strong></td>
+            <td>Toast notifications untuk semua aksi, loading states, SSE real-time updates, sound alerts untuk host
+                down/up.</td>
+            <td><span class="badge badge-success">✅ Terpenuhi</span></td>
+        </tr>
+        <tr>
+            <td>4</td>
+            <td><strong>Design Dialogs for Closure</strong></td>
+            <td>Modal dengan header/body/footer jelas, tombol Cancel/Save eksplisit, konfirmasi delete.</td>
+            <td><span class="badge badge-success">✅ Terpenuhi</span></td>
+        </tr>
+        <tr>
+            <td>5</td>
+            <td><strong>Prevent Errors</strong></td>
+            <td>Validasi input (IP, password strength), konfirmasi delete. <strong>Bisa ditingkatkan</strong>: inline
+                validation saat typing.</td>
+            <td><span class="badge badge-warning">⚠️ Sebagian</span></td>
+        </tr>
+        <tr>
+            <td>6</td>
+            <td><strong>Permit Easy Reversal</strong></td>
+            <td>Tidak ada fitur undo/restore setelah delete. Backup service ada tapi tidak ekspos ke UI.</td>
+            <td><span class="badge badge-warning">⚠️ Kurang</span></td>
+        </tr>
+        <tr>
+            <td>7</td>
+            <td><strong>Support Internal Locus of Control</strong></td>
+            <td>User mengontrol penuh: tambah/edit/hapus host, manual ping, filter/search, theme toggle.</td>
+            <td><span class="badge badge-success">✅ Terpenuhi</span></td>
+        </tr>
+        <tr>
+            <td>8</td>
+            <td><strong>Reduce Short-term Memory Load</strong></td>
+            <td>Stats summary selalu visible, host cards dengan status warna, search/filter untuk navigasi cepat.</td>
+            <td><span class="badge badge-success">✅ Terpenuhi</span></td>
+        </tr>
+    </table>
+
+    <h3>Ringkasan Evaluasi</h3>
+    <table>
+        <tr>
+            <th>Aspek</th>
+            <th>Skor</th>
+            <th>Catatan</th>
+        </tr>
+        <tr>
+            <td><strong>Golden Rules</strong></td>
+            <td>6.5/8</td>
+            <td>Rule 5 & 6 perlu perbaikan</td>
+        </tr>
+        <tr>
+            <td>Responsiveness</td>
+            <td>9/10</td>
+            <td>Mobile-friendly, PWA ready</td>
+        </tr>
+        <tr>
+            <td>Accessibility</td>
+            <td>7/10</td>
+            <td>Color contrast baik, bisa tambah ARIA labels</td>
+        </tr>
+        <tr>
+            <td>Performance</td>
+            <td>8/10</td>
+            <td>SSE efisien, bisa tambah virtual scrolling</td>
+        </tr>
+    </table>
+
+    <h3>Rekomendasi Perbaikan</h3>
+    <ol>
+        <li><strong>Error Prevention (Rule 5)</strong>:
+            <ul>
+                <li>Tambah inline validation real-time pada form</li>
+                <li>Disable tombol save jika form invalid</li>
+                <li>Tambah auto-suggest untuk IP address</li>
+            </ul>
+        </li>
+        <li><strong>Easy Reversal (Rule 6)</strong>:
+            <ul>
+                <li>Implementasi "Undo Delete" dengan soft-delete dan grace period</li>
+                <li>Tampilkan tombol restore di UI untuk item yang baru dihapus</li>
+                <li>History/versioning untuk perubahan konfigurasi</li>
+            </ul>
+        </li>
+        <li><strong>Accessibility</strong>:
+            <ul>
+                <li>Tambah ARIA labels pada interactive elements</li>
+                <li>Keyboard navigation untuk semua modal</li>
+                <li>Skip-to-content link</li>
+            </ul>
+        </li>
+    </ol>
+
+    <div class="page-break"></div>
+
+    <!-- Section 7 -->
+    <h2 id="section7">7. Security Features</h2>
+
+    <table>
+        <tr>
+            <th>Feature</th>
+            <th>Implementasi</th>
+        </tr>
+        <tr>
+            <td><strong>Authentication</strong></td>
+            <td>Session-based dengan bcrypt password hashing</td>
+        </tr>
+        <tr>
+            <td><strong>Session Storage</strong></td>
+            <td>SQLite persistent store dengan auto-cleanup</td>
+        </tr>
+        <tr>
+            <td><strong>Rate Limiting</strong></td>
+            <td>1000 req/15min global, 10 req/15min untuk login</td>
+        </tr>
+        <tr>
+            <td><strong>WAF</strong></td>
+            <td>Custom middleware untuk SQL injection, XSS, path traversal</td>
+        </tr>
+        <tr>
+            <td><strong>CSP</strong></td>
+            <td>Content Security Policy via Helmet</td>
+        </tr>
+        <tr>
+            <td><strong>HTTPS</strong></td>
+            <td>Auto-redirect di production</td>
+        </tr>
+        <tr>
+            <td><strong>CORS</strong></td>
+            <td>Configurable origin restriction</td>
+        </tr>
+        <tr>
+            <td><strong>Input Validation</strong></td>
+            <td>Host/IP regex validation untuk prevent command injection</td>
+        </tr>
+    </table>
+
+    <div class="page-break"></div>
+
+    <!-- Section 8 -->
+    <h2 id="section8">8. Kesimpulan</h2>
+
+    <p>Network Monitor App adalah aplikasi monitoring jaringan yang <strong>matang dan production-ready</strong> dengan
+        arsitektur modular, keamanan berlapis, dan UI yang responsif. Evaluasi 8 Golden Rules menunjukkan skor
+        <strong>6.5/8</strong> dengan ruang perbaikan pada fitur pencegahan error dan kemampuan undo.
+    </p>
+
+    <h3>Kelebihan</h3>
+    <ul>
+        <li>✅ Real-time monitoring dengan SSE</li>
+        <li>✅ Multi-channel notifications</li>
+        <li>✅ SNMP traffic monitoring</li>
+        <li>✅ Security hardened</li>
+        <li>✅ PWA support</li>
+    </ul>
+
+    <h3>Area Pengembangan</h3>
+    <ul>
+        <li>⚠️ Inline form validation</li>
+        <li>⚠️ Undo/restore capability</li>
+        <li>⚠️ Enhanced accessibility (ARIA)</li>
+    </ul>
+
+    <hr style="margin-top: 60px;">
+    <p style="text-align: center; color: #9ca3af; font-size: 10pt;">
+        Dokumentasi ini dibuat secara otomatis berdasarkan analisis source code.<br>
+        © 2025 Network Monitor App - Muhammad Ilhaam Fadhiil
+    </p>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'neutral',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true
+            }
+        });
+    </script>
+</body>
+
+</html>
