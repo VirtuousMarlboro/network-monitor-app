@@ -6075,6 +6075,7 @@ async function handleScanInterfaces() {
 
 // Traffic modal state
 let currentTrafficPeriod = '24h';
+let lastTrafficPeriod = '24h'; // Remember the last selected period for navigation
 let currentTrafficFromDate = null;
 let currentTrafficToDate = null;
 
@@ -6119,6 +6120,7 @@ function initTrafficFilterHandlers() {
     if (periodSelect) {
         periodSelect.onchange = () => {
             currentTrafficPeriod = periodSelect.value;
+            lastTrafficPeriod = periodSelect.value; // Save for navigation
             currentTrafficFromDate = null;
             currentTrafficToDate = null;
             loadTrafficData();
@@ -6156,16 +6158,17 @@ function navigateTrafficPeriod(direction) {
         '30d': 30 * 24 * 60 * 60 * 1000
     };
 
-    const duration = periodDurations[currentTrafficPeriod] || periodDurations['24h'];
+    // Use lastTrafficPeriod for duration (preserves selection after navigation)
+    const duration = periodDurations[lastTrafficPeriod] || periodDurations['24h'];
     const now = Date.now();
 
     if (!currentTrafficFromDate || !currentTrafficToDate) {
-        // Initialize based on current period
+        // Initialize based on last selected period
         currentTrafficToDate = new Date(now).toISOString();
         currentTrafficFromDate = new Date(now - duration).toISOString();
     }
 
-    // Shift time range
+    // Shift time range by the period duration
     const fromMs = new Date(currentTrafficFromDate).getTime() + (direction * duration);
     const toMs = new Date(currentTrafficToDate).getTime() + (direction * duration);
 
@@ -6174,7 +6177,7 @@ function navigateTrafficPeriod(direction) {
 
     currentTrafficFromDate = new Date(fromMs).toISOString();
     currentTrafficToDate = new Date(toMs).toISOString();
-    currentTrafficPeriod = null;
+    currentTrafficPeriod = null; // Clear period to use from/to dates
 
     loadTrafficData();
 }

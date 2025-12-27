@@ -125,6 +125,7 @@ const FloatingWindowManager = {
         let dragOffsetX = 0;
         let dragOffsetY = 0;
 
+        // Mouse drag events
         header.addEventListener('mousedown', (e) => {
             if (e.target.closest('.floating-window-btn')) return; // Don't drag on buttons
             isDragging = true;
@@ -143,6 +144,35 @@ const FloatingWindowManager = {
         });
 
         document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                element.classList.remove('dragging');
+            }
+        });
+
+        // Touch drag events for mobile
+        header.addEventListener('touchstart', (e) => {
+            if (e.target.closest('.floating-window-btn')) return;
+            isDragging = true;
+            const touch = e.touches[0];
+            dragOffsetX = touch.clientX - element.offsetLeft;
+            dragOffsetY = touch.clientY - element.offsetTop;
+            element.classList.add('dragging');
+            this.bringToFront(id);
+            e.preventDefault(); // Prevent scrolling when starting drag
+        }, { passive: false });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault(); // Prevent page scroll during drag
+            const touch = e.touches[0];
+            const newX = Math.max(0, Math.min(window.innerWidth - 100, touch.clientX - dragOffsetX));
+            const newY = Math.max(0, Math.min(window.innerHeight - 50, touch.clientY - dragOffsetY));
+            element.style.left = `${newX}px`;
+            element.style.top = `${newY}px`;
+        }, { passive: false });
+
+        document.addEventListener('touchend', () => {
             if (isDragging) {
                 isDragging = false;
                 element.classList.remove('dragging');

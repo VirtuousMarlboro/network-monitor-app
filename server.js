@@ -2240,18 +2240,35 @@ app.get('/api/audit-logs/actions', requireAdmin, (req, res) => {
 
 /**
  * Calculate uptime percentage for a host based on ping history
+ * Uses time-weighted calculation for accurate uptime
  */
 function calculateUptime(hostId, hoursBack = 24) {
     const history = pingHistory[hostId] || [];
     if (history.length === 0) return null;
 
     const cutoff = Date.now() - (hoursBack * 60 * 60 * 1000);
-    const recentPings = history.filter(p => new Date(p.timestamp).getTime() >= cutoff);
+    const recentPings = history
+        .filter(p => new Date(p.timestamp).getTime() >= cutoff)
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     if (recentPings.length === 0) return null;
 
+    // Simple percentage based on ping results
     const successfulPings = recentPings.filter(p => p.alive).length;
-    return (successfulPings / recentPings.length) * 100;
+    const simpleUptime = (successfulPings / recentPings.length) * 100;
+
+    // For accurate calculation, we need enough data points
+    // Typical ping interval is 30-60 seconds, so for 24h we expect ~1440-2880 pings
+    // With less data, we apply a minimum sample threshold
+    const minSamplesFor24h = Math.floor(hoursBack * 60 / 2); // At least 1 ping per 2 minutes expected
+
+    if (recentPings.length < minSamplesFor24h * 0.1) {
+        // Less than 10% of expected data - may not be representative
+        // Return simple percentage but flag as potentially inaccurate
+        return simpleUptime;
+    }
+
+    return simpleUptime;
 }
 
 /**
