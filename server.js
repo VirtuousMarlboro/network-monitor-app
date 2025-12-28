@@ -1542,8 +1542,9 @@ async function autoPingAllHosts() {
             pingHistory[hostData.id].pop();
         }
 
-        // Check for status change - Host went DOWN (from online OR unknown)
-        if (previousStatus !== 'offline' && newStatus === 'offline') {
+        // Check for status change - Host went DOWN (only from online, NOT from unknown)
+        // This prevents false alarm on first ping or after server restart
+        if (previousStatus === 'online' && newStatus === 'offline') {
             const logEntry = createStatusLog(hostData, 'down', result.timestamp);
 
             // Track when host first went down
@@ -1655,8 +1656,9 @@ async function autoPingAllHosts() {
             }
         }
 
-        // Check for status change - Host came back UP (from offline or unknown)
-        if ((previousStatus === 'offline' || previousStatus === 'unknown') && newStatus === 'online') {
+        // Check for status change - Host came back UP (only from offline, NOT from unknown)
+        // This prevents false "recovered" notification on first successful ping
+        if (previousStatus === 'offline' && newStatus === 'online') {
             const logEntry = createStatusLog(hostData, 'up', result.timestamp);
 
             // Reset down tracking - host is back online
