@@ -1507,12 +1507,13 @@ async function autoPingAllHosts() {
             }
         }
 
-        // Store in history (keep last 100 entries)
+        // Store in history (keep enough for 24h+ uptime calculation)
+        // With 30s interval: 2880 pings/day, we keep 8640 for 3 days of data
         if (!pingHistory[hostData.id]) {
             pingHistory[hostData.id] = [];
         }
         pingHistory[hostData.id].unshift(result);
-        if (pingHistory[hostData.id].length > 100) pingHistory[hostData.id].pop();
+        if (pingHistory[hostData.id].length > 8640) pingHistory[hostData.id].pop();
 
         // POLL SNMP if enabled and online
         if (hostData.snmpEnabled && newStatus === 'online' && hostData.snmpInterface) {
