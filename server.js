@@ -1613,10 +1613,10 @@ async function autoPingAllHosts() {
             if (maintenanceDown) {
                 console.log(`🔧 Host ${hostData.name} is in maintenance - suppressing down notification`);
             } else {
-                await sendTelegramNotification(`🔴 Host Offline\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nTime: ${new Date(result.timestamp).toLocaleString()}`);
+                await sendTelegramNotification(`\u{1F534} Host Offline\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nTime: ${new Date(result.timestamp).toLocaleString()}`);
                 // Also send push notification with unique tag
                 await sendPushNotificationToAll({
-                    title: '🔴 Host Offline',
+                    title: '\u{1F534} Host Offline',
                     body: `${hostData.name} (${hostData.host}) is down`,
                     tag: `host-down-${hostData.id}-${Date.now()}`
                 });
@@ -1735,10 +1735,10 @@ async function autoPingAllHosts() {
             if (maintenanceUp) {
                 console.log(`🔧 Host ${hostData.name} is in maintenance - suppressing up notification`);
             } else {
-                await sendTelegramNotification(`🟢 Host Online\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nLatency: ${result.time}ms`);
+                await sendTelegramNotification(`\u{1F7E2} Host Online\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nLatency: ${result.time}ms`);
                 // Also send push notification with unique tag
                 await sendPushNotificationToAll({
-                    title: '🟢 Host Online',
+                    title: '\u{1F7E2} Host Online',
                     body: `${hostData.name} is back online (${result.time}ms)`,
                     tag: `host-up-${hostData.id}-${Date.now()}`
                 });
