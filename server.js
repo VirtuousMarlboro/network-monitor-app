@@ -18,6 +18,7 @@ const { wafMiddleware, getWafStats } = require('./services/wafService');
 const webpush = require('web-push');
 const snmpService = require('./services/snmpService');
 const databaseService = require('./services/databaseService');
+const pingService = require('./services/pingService');
 
 // ========================================
 // Modular Routes & Middleware (Phase 3 Refactoring)
@@ -1452,7 +1453,7 @@ async function autoPingAllHosts() {
 
     for (const hostData of monitoredHosts) {
         const previousStatus = hostData.status || 'unknown'; // Handle undefined status
-        const result = await pingHost(hostData.host);
+        const result = await pingService.pingHost(hostData.host);
 
         // Initialize failure counter if not exists
         if (hostFailureCount[hostData.id] === undefined) {
@@ -1514,6 +1515,13 @@ async function autoPingAllHosts() {
         }
         pingHistory[hostData.id].unshift(result);
         if (pingHistory[hostData.id].length > 8640) pingHistory[hostData.id].pop();
+
+        // Store in database for persistence across restarts
+        databaseService.storePingEntry(hostData.id, {
+            timestamp: new Date(result.timestamp).getTime(),
+            alive: result.alive,
+            latency: result.time
+        });
 
         // POLL SNMP if enabled and online
         if (hostData.snmpEnabled && newStatus === 'online' && hostData.snmpInterface) {
@@ -3279,8 +3287,77 @@ function startSnmpPolling() {
     console.log('📡 SNMP Polling started (SQLite storage)');
 }
 
+// ========================================
+// Health Check Endpoints (for Load Balancers/Monitoring)
+// ========================================
+const serverStartTime = Date.now();
+
+// Health check - detailed status (for monitoring tools)
+app.get('/api/health', (req, res) => {
+    const uptime = Date.now() - serverStartTime;
+    const memUsage = process.memoryUsage();
+
+    res.json({
+        status: 'healthy',
+        uptime: uptime,
+        uptimeHuman: formatUptimeHuman(uptime),
+        timestamp: new Date().toISOString(),
+        memory: {
+            heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',
+            heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + ' MB',
+            rss: Math.round(memUsage.rss / 1024 / 1024) + ' MB'
+        },
+        hosts: {
+            total: monitoredHosts.length,
+            online: monitoredHosts.filter(h => h.status === 'online').length,
+            offline: monitoredHosts.filter(h => h.status === 'offline').length
+        },
+        clients: {
+            sse: sseClients.length
+        },
+        autoPing: autoPingEnabled
+    });
+});
+
+// Ready check - simple OK/NOT OK (for load balancers)
+app.get('/api/ready', (req, res) => {
+    // Check if basic services are ready
+    const isReady = monitoredHosts !== undefined && databaseService.db;
+
+    if (isReady) {
+        res.status(200).json({ status: 'ready' });
+    } else {
+        res.status(503).json({ status: 'not_ready' });
+    }
+});
+
+// Live check - minimal endpoint (for kubernetes probes)
+app.get('/api/live', (req, res) => {
+    res.status(200).send('OK');
+});
+
+function formatUptimeHuman(ms) {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ${hours % 24}h ${minutes % 60}m`;
+    if (hours > 0) return `${hours}h ${minutes % 60}m`;
+    if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+    return `${seconds}s`;
+}
+
+// ========================================
+// Server Startup
+// ========================================
 app.listen(PORT, () => {
     console.log(`🌐 Network Monitor running at http://localhost:${PORT}`);
+
+    // Load ping history from database (for uptime calculation persistence)
+    const loadedPingHistory = databaseService.loadAllPingHistory(72); // Load last 3 days
+    Object.assign(pingHistory, loadedPingHistory);
+
     // Start auto-ping by default
     startAutoPing();
 
@@ -3294,4 +3371,11 @@ app.listen(PORT, () => {
     setInterval(() => {
         broadcastSSE('heartbeat', { timestamp: Date.now() });
     }, 30000); // Every 30 seconds
+
+    // Cleanup old ping history daily
+    setInterval(() => {
+        databaseService.cleanupOldPingHistory(3); // Keep 3 days
+    }, 24 * 60 * 60 * 1000); // Every 24 hours
+
+    console.log('✅ Health check endpoints: /api/health, /api/ready, /api/live');
 });

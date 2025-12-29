@@ -253,6 +253,21 @@ function initializeSchema() {
         );
     `);
 
+    // Ping History Table - For persistent uptime calculation
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS ping_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            host_id TEXT NOT NULL,
+            timestamp INTEGER NOT NULL,
+            alive INTEGER NOT NULL,
+            latency REAL,
+            created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_ping_host_time 
+        ON ping_history(host_id, timestamp DESC);
+    `);
+
     console.log('✅ Database schema initialized');
 }
 
@@ -902,6 +917,116 @@ function migrateAllFromJson() {
 }
 
 // ========================================
+// ========================================
+// Ping History Operations (for uptime calculation)
+// ========================================
+const pingInsertStmt = db.prepare(`
+    INSERT INTO ping_history (host_id, timestamp, alive, latency)
+    VALUES (?, ?, ?, ?)
+`);
+
+const pingSelectStmt = db.prepare(`
+    SELECT timestamp, alive, latency
+    FROM ping_history
+    WHERE host_id = ? AND timestamp >= ?
+    ORDER BY timestamp ASC
+`);
+
+const pingCleanupStmt = db.prepare(`
+    DELETE FROM ping_history 
+    WHERE timestamp < ?
+`);
+
+const pingLoadAllStmt = db.prepare(`
+    SELECT host_id, timestamp, alive, latency
+    FROM ping_history
+    WHERE timestamp >= ?
+    ORDER BY host_id, timestamp ASC
+`);
+
+/**
+ * Store a ping result
+ */
+function storePingEntry(hostId, data) {
+    try {
+        pingInsertStmt.run(
+            hostId,
+            data.timestamp,
+            data.alive ? 1 : 0,
+            data.latency || null
+        );
+    } catch (err) {
+        console.error('Error storing ping entry:', err.message);
+    }
+}
+
+/**
+ * Get ping history for a host (for uptime calculation)
+ * @param {string} hostId 
+ * @param {number} hoursBack - How many hours to look back
+ */
+function getPingHistory(hostId, hoursBack = 24) {
+    try {
+        const cutoff = Date.now() - (hoursBack * 60 * 60 * 1000);
+        const rows = pingSelectStmt.all(hostId, cutoff);
+        return rows.map(r => ({
+            timestamp: new Date(r.timestamp).toISOString(),
+            alive: !!r.alive,
+            time: r.latency
+        }));
+    } catch (err) {
+        console.error('Error getting ping history:', err.message);
+        return [];
+    }
+}
+
+/**
+ * Load all ping history into memory (for server startup)
+ * @param {number} hoursBack - How many hours to look back (default 72h = 3 days)
+ */
+function loadAllPingHistory(hoursBack = 72) {
+    try {
+        const cutoff = Date.now() - (hoursBack * 60 * 60 * 1000);
+        const rows = pingLoadAllStmt.all(cutoff);
+
+        // Group by host_id
+        const pingHistory = {};
+        for (const row of rows) {
+            if (!pingHistory[row.host_id]) {
+                pingHistory[row.host_id] = [];
+            }
+            pingHistory[row.host_id].push({
+                timestamp: new Date(row.timestamp).toISOString(),
+                alive: !!row.alive,
+                time: row.latency
+            });
+        }
+
+        console.log(`📂 Loaded ping history for ${Object.keys(pingHistory).length} hosts from database`);
+        return pingHistory;
+    } catch (err) {
+        console.error('Error loading ping history:', err.message);
+        return {};
+    }
+}
+
+/**
+ * Clean up old ping entries (older than specified days)
+ * @param {number} daysToKeep - How many days of data to keep
+ */
+function cleanupOldPingHistory(daysToKeep = 3) {
+    try {
+        const cutoff = Date.now() - (daysToKeep * 24 * 60 * 60 * 1000);
+        const result = pingCleanupStmt.run(cutoff);
+        if (result.changes > 0) {
+            console.log(`🧹 Cleaned up ${result.changes} old ping entries`);
+        }
+    } catch (err) {
+        console.error('Error cleaning up ping history:', err.message);
+    }
+}
+
+// ========================================
 // Cleanup on exit
 // ========================================
 process.on('exit', () => db.close());
@@ -954,6 +1079,11 @@ module.exports = {
     getSetting,
     setSetting,
     getAllSettings,
+    // Ping History
+    storePingEntry,
+    getPingHistory,
+    loadAllPingHistory,
+    cleanupOldPingHistory,
     // Migration
     migrateFromJson,
     migrateAllFromJson,
