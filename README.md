@@ -2,7 +2,7 @@
 
 Aplikasi monitoring jaringan enterprise-grade berbasis web untuk memantau konektivitas, traffic SNMP, dan manajemen tiket insiden secara real-time.
 
-![Node.js](https://img.shields.io/badge/Node.js-18+-green) ![Express](https://img.shields.io/badge/Express-4.18-blue) ![SQLite](https://img.shields.io/badge/SQLite-3-003B57) ![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8) ![License](https://img.shields.io/badge/License-MIT-yellow)
+![Node.js](https://img.shields.io/badge/Node.js-18+-green) ![Express](https://img.shields.io/badge/Express-4.18-blue) ![SQLite](https://img.shields.io/badge/SQLite-3-003B57) ![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8) ![PM2](https://img.shields.io/badge/PM2-Production-2B037A) ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ## ✨ Fitur Utama
 
@@ -10,9 +10,9 @@ Aplikasi monitoring jaringan enterprise-grade berbasis web untuk memantau konekt
 - **Real-time Status** - Pemantauan status host (Online/Offline) dengan latency
 - **Continuous Ping** - Ping terus-menerus (seperti `ping -t`) dengan auto-scroll
 - **Traceroute** - Trace route ke host dengan output streaming
-- **SNMP Traffic** - Monitoring traffic interface bandwidth via SNMP (v2c)
-- **Interactive Maps** - Visualisasi lokasi host dengan Leaflet.js
-- **Traffic Graphs** - Grafik traffic in/out real-time
+- **SNMP Traffic** - Monitoring traffic interface bandwidth via SNMP (v2c/64-bit counters)
+- **Interactive Maps** - Visualisasi lokasi host dengan Leaflet.js dan marker clustering
+- **Traffic Graphs** - Grafik traffic in/out real-time dengan filter period dan navigasi
 
 ### 🎫 Tiketing & Insiden
 - **Manajemen Tiket** - Buat, update, dan lacak tiket insiden
@@ -23,8 +23,9 @@ Aplikasi monitoring jaringan enterprise-grade berbasis web untuk memantau konekt
 
 ### 🔔 Notifikasi
 - **Push Notifications** - Web Push untuk desktop dan mobile (PWA)
-- **Telegram Bot** - Notifikasi via Telegram dengan rate limiting
+- **Telegram Bot** - Notifikasi via Telegram dengan rate limiting (20 msg/min)
 - **Webhooks** - Integrasi dengan sistem eksternal
+- **In-Web Alerts** - Notifikasi visual dalam aplikasi
 - **Sound Alerts** - Audio feedback untuk host up/down
 
 ### 🛡️ Keamanan & Manajemen
@@ -34,11 +35,13 @@ Aplikasi monitoring jaringan enterprise-grade berbasis web untuk memantau konekt
 - **WAF** - Proteksi terhadap SQLi, XSS, dan serangan umum
 - **Audit Logs** - Pencatatan aktivitas user lengkap
 - **Rate Limiting** - Proteksi API dari abuse
+- **Health Checks** - `/api/health`, `/api/ready`, `/api/live` endpoints
 
 ### ⚙️ Teknis
 - **PWA Ready** - Installable sebagai aplikasi mobile/desktop
 - **SQLite Database** - Data tersimpan aman (ACID compliant)
-- **JSON Backup** - Backup otomatis data penting
+- **Ping History Persistence** - Riwayat ping tersimpan di database
+- **PM2 Ready** - Konfigurasi production dengan `ecosystem.config.js`
 - **Modular Architecture** - Routes/Services/Middleware terpisah
 - **SSE Real-time** - Server-Sent Events untuk update live
 
@@ -59,11 +62,29 @@ cd network-monitor-app
 # 2. Install dependencies
 npm install
 
-# 3. Jalankan aplikasi
+# 3. Jalankan aplikasi (Development)
 npm start
 
 # 4. Akses di browser
 # http://localhost:3000
+```
+
+### Production dengan PM2
+
+```bash
+# Install PM2 globally
+npm install -g pm2
+
+# Start dengan ecosystem config
+pm2 start ecosystem.config.js
+
+# Status dan monitoring
+pm2 status
+pm2 logs network-monitor
+
+# Auto-start on boot
+pm2 startup
+pm2 save
 ```
 
 ### Login Default
@@ -81,7 +102,7 @@ Buat file `.env` untuk konfigurasi:
 PORT=3000
 NODE_ENV=production
 
-# Security
+# Security (WAJIB untuk production)
 SESSION_SECRET=rahasia_super_panjang_minimal_32_karakter
 
 # Telegram (Opsional)
@@ -93,27 +114,54 @@ TELEGRAM_CHAT_ID=your_chat_id
 
 ```
 network-monitor-app/
-├── config/              # Konstanta dan konfigurasi
-├── data/                # Database & JSON (JANGAN DIHAPUS!)
+├── config/                 # Konstanta dan konfigurasi
+├── data/                   # Database & JSON (JANGAN DIHAPUS!)
 │   ├── network_monitor.db
 │   ├── sessions.db
 │   └── *.json
-├── middleware/          # Express middleware (auth, WAF)
-├── public/              # Frontend (HTML, CSS, JS)
+├── middleware/             # Express middleware (auth, WAF)
+├── public/                 # Frontend (HTML, CSS, JS)
 │   ├── index.html
 │   ├── login.html
 │   ├── app.js
 │   ├── styles.css
+│   ├── js/
+│   │   ├── store.js
+│   │   ├── floating-windows.js
+│   │   └── components/
 │   └── service-worker.js
-├── routes/              # API Routes modular
-├── services/            # Business logic
-│   ├── databaseService.js
-│   ├── snmpService.js
-│   └── backupService.js
-├── uploads/             # File uploads
-├── server.js            # Entry point
+├── routes/                 # API Routes modular
+│   ├── authRoutes.js
+│   ├── hostRoutes.js
+│   ├── ticketRoutes.js
+│   └── ...
+├── services/               # Business logic
+│   ├── databaseService.js  # SQLite operations
+│   ├── snmpService.js      # SNMP polling
+│   ├── pingService.js      # Network ping
+│   ├── notificationService.js # Telegram & Push
+│   ├── backupService.js    # JSON backup
+│   └── wafService.js       # WAF protection
+├── tests/                  # Unit tests
+├── uploads/                # File uploads
+├── server.js               # Entry point
+├── ecosystem.config.js     # PM2 configuration
 └── package.json
 ```
+
+## 🔄 Update Aplikasi
+
+```bash
+# 1. Upload/timpa file ke server (SCP/SFTP/rsync)
+
+# 2. Install dependencies jika ada yang baru
+npm install --production
+
+# 3. Reload dengan zero-downtime
+pm2 reload network-monitor
+```
+
+> **Catatan:** Jangan timpa folder `data/` dan `uploads/`!
 
 ## 🔒 Data yang Tidak Boleh Dihapus
 
@@ -130,9 +178,10 @@ Saat update aplikasi, **JANGAN menimpa folder berikut:**
 | Frontend | HTML5, CSS3, Vanilla JS |
 | Reactivity | Alpine.js |
 | Charts | Chart.js |
-| Maps | Leaflet.js |
+| Maps | Leaflet.js, MarkerCluster |
 | Security | Helmet, BCrypt, Rate Limiter |
 | Push | Web Push API, VAPID |
+| Process Manager | PM2 |
 
 ## 📝 API Endpoints
 
@@ -145,6 +194,19 @@ Saat update aplikasi, **JANGAN menimpa folder berikut:**
 | POST | `/api/ping-stream` | Continuous ping |
 | POST | `/api/traceroute` | Traceroute |
 | GET | `/api/events` | SSE stream |
+| GET | `/api/health` | Health check (detailed) |
+| GET | `/api/ready` | Ready check (load balancer) |
+| GET | `/api/live` | Live check (kubernetes) |
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test file
+npm test -- tests/serverCore.test.js
+```
 
 ## 📄 Lisensi
 
