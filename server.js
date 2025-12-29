@@ -1393,6 +1393,7 @@ function broadcastSSE(event, data) {
 }
 
 // Process SNMP Traffic Data - Now uses SQLite via databaseService
+// BUG FIX: Added proper counter wraparound, reset detection, and validation
 function processTrafficData(hostId, data) {
     // Get previous entry from database for rate calculation
     const prev = databaseService.getLastTrafficEntry(hostId);
@@ -1403,28 +1404,77 @@ function processTrafficData(hostId, data) {
     if (prev) {
         const timeDiff = (data.timestamp - prev.timestamp) / 1000; // seconds
 
-        // Only calculate if time diff is reasonable (between 0 and 5 minutes)
-        if (timeDiff > 0 && timeDiff < 300) {
+        // Only calculate if time diff is reasonable (between 1 and 60 seconds)
+        // Tighter window to catch anomalies better
+        if (timeDiff >= 1 && timeDiff <= 60) {
             let inDiff = data.inOctets - prev.inOctets;
             let outDiff = data.outOctets - prev.outOctets;
 
-            // Handle counter wrap-around
-            const wrapValue = data.inOctets > 4294967296 ? Number.MAX_SAFE_INTEGER : 4294967296;
+            // Detect counter reset or device reboot (counter goes to 0 or much smaller)
+            // If difference is very large negative, it's likely a reset not wraparound
+            const RESET_THRESHOLD = -1000000000; // -1GB indicates likely reset
 
-            if (inDiff < 0) inDiff += wrapValue;
-            if (outDiff < 0) outDiff += wrapValue;
+            if (inDiff < RESET_THRESHOLD || outDiff < RESET_THRESHOLD) {
+                // Counter was reset - skip this sample, return previous values
+                console.log(`[SNMP] Counter reset detected for host ${hostId}, skipping sample`);
+                return null;
+            }
+
+            // Handle 64-bit counter wrap-around (very rare, at 10Gbps takes ~46 years)
+            // Handle 32-bit counter wrap-around (at 100Mbps takes ~5.7 minutes)
+            const WRAP_32BIT = 4294967296;        // 2^32
+            const WRAP_64BIT = Number.MAX_SAFE_INTEGER;
+
+            // Determine wrap value based on counter size
+            const wrapValue = data.is64bit ? WRAP_64BIT : WRAP_32BIT;
+
+            // Only apply wraparound for small negative values (genuine wrap)
+            // Large negative values indicate counter reset (handled above)
+            if (inDiff < 0 && inDiff > RESET_THRESHOLD) {
+                inDiff += wrapValue;
+            }
+            if (outDiff < 0 && outDiff > RESET_THRESHOLD) {
+                outDiff += wrapValue;
+            }
 
             // Calculate Mbps
             traffic_in = parseFloat(((inDiff * 8) / timeDiff / 1000000).toFixed(4));
             traffic_out = parseFloat(((outDiff * 8) / timeDiff / 1000000).toFixed(4));
 
-            // Sanity check - cap at realistic maximum (10 Gbps = 10000 Mbps)
-            const MAX_REALISTIC_MBPS = 10000;
+            // VALIDATION: Get host to check interface speed limit
+            const host = monitoredHosts.find(h => h.id === hostId);
+
+            // Default max: interface speed * 1.2 (allow 20% burst overhead)
+            // If no speed known, cap at 1000 Mbps (1 Gbps) which is reasonable default
+            let maxMbps = 1000; // Default 1 Gbps
+
+            if (host && host.snmpInterfaceSpeed) {
+                // snmpInterfaceSpeed is in bps, convert to Mbps and allow 20% burst
+                maxMbps = Math.max(100, (host.snmpInterfaceSpeed / 1000000) * 1.2);
+            }
+
+            // Absolute maximum sanity cap (even 100G links shouldn't exceed this)
+            const ABSOLUTE_MAX_MBPS = 100000; // 100 Gbps
+            maxMbps = Math.min(maxMbps, ABSOLUTE_MAX_MBPS);
+
+            // Apply limits
             if (traffic_in < 0) traffic_in = 0;
             if (traffic_out < 0) traffic_out = 0;
 
-            if (traffic_in > MAX_REALISTIC_MBPS) traffic_in = MAX_REALISTIC_MBPS;
-            if (traffic_out > MAX_REALISTIC_MBPS) traffic_out = MAX_REALISTIC_MBPS;
+            // If value exceeds interface capacity, it's anomalous data
+            if (traffic_in > maxMbps) {
+                console.log(`[SNMP] Anomalous traffic_in ${traffic_in} Mbps > max ${maxMbps} for host ${hostId}, capping`);
+                traffic_in = maxMbps;
+            }
+            if (traffic_out > maxMbps) {
+                console.log(`[SNMP] Anomalous traffic_out ${traffic_out} Mbps > max ${maxMbps} for host ${hostId}, capping`);
+                traffic_out = maxMbps;
+            }
+        } else if (timeDiff > 60) {
+            // Time gap too large (likely server restart or SNMP timeout)
+            // Skip this sample to avoid averaging errors
+            console.log(`[SNMP] Time gap ${timeDiff}s too large for host ${hostId}, skipping`);
+            return null;
         }
     }
 

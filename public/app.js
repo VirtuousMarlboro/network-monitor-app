@@ -6111,9 +6111,20 @@ async function openTrafficModal(hostId) {
     if (!host) return;
 
     currentTrafficHostId = hostId;
-    currentTrafficPeriod = '24h';
+    // Reset to Last Hour when opening modal
+    currentTrafficPeriod = '1h';
+    lastTrafficPeriod = '1h';
+    currentTrafficFromDate = null;
+    currentTrafficToDate = null;
+
     document.getElementById('trafficHostName').textContent = host.name;
-    document.getElementById('trafficPeriodSelect').value = '24h';
+    document.getElementById('trafficPeriodSelect').value = '1h';
+
+    // Clear date inputs
+    const fromInput = document.getElementById('trafficFromDate');
+    const toInput = document.getElementById('trafficToDate');
+    if (fromInput) fromInput.value = '';
+    if (toInput) toInput.value = '';
 
     showModal(document.getElementById('trafficModal'));
 
@@ -6173,6 +6184,30 @@ function initTrafficFilterHandlers() {
 
     if (nextBtn) {
         nextBtn.onclick = () => navigateTrafficPeriod(1);
+    }
+
+    // Clear button - reset to Last Hour
+    const clearBtn = document.getElementById('trafficClearBtn');
+    if (clearBtn) {
+        clearBtn.onclick = () => {
+            // Reset to 1h (Last Hour)
+            currentTrafficPeriod = '1h';
+            lastTrafficPeriod = '1h';
+            currentTrafficFromDate = null;
+            currentTrafficToDate = null;
+
+            // Reset UI
+            const periodSelect = document.getElementById('trafficPeriodSelect');
+            if (periodSelect) periodSelect.value = '1h';
+
+            const fromInput = document.getElementById('trafficFromDate');
+            const toInput = document.getElementById('trafficToDate');
+            if (fromInput) fromInput.value = '';
+            if (toInput) toInput.value = '';
+
+            // Reload data
+            loadTrafficData();
+        };
     }
 }
 
