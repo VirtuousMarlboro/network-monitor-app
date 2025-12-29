@@ -5286,3 +5286,92 @@ textarea:focus {
         padding-left: 32px;
     }
 }
+
+/* ========================================
+   Leaflet Marker Cluster - Fix Flickering
+   ======================================== */
+
+/* Prevent animation flickering on cluster icons */
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+    transition: none !important;
+    animation: none !important;
+}
+
+/* Custom cluster icon styling */
+.custom-cluster-icon {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+.cluster-icon {
+    pointer-events: none;
+    transition: none !important;
+}
+
+/* Prevent hover state changes on cluster markers */
+.leaflet-marker-icon:hover .cluster-icon {
+    transform: none !important;
+}
+
+/* Ensure stable cluster rendering */
+.marker-cluster,
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+    transition: none !important;
+    animation: none !important;
+}
+
+/* Single marker icon stability */
+.host-marker-icon {
+    transition: none !important;
+    pointer-events: auto !important;
+}
+
+/* Fix popup blocking clicks */
+.leaflet-popup-pane,
+.leaflet-tooltip-pane {
+    pointer-events: none;
+}
+
+.leaflet-popup,
+.leaflet-tooltip {
+    pointer-events: auto;
+}
+
+/* Marker popup styling */
+.marker-popup h4 {
+    margin: 0 0 8px 0;
+    color: var(--text-primary);
+}
+
+.marker-popup .host-ip {
+    font-family: monospace;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.marker-popup .status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    margin-bottom: 8px;
+}
+
+.marker-popup .status.online {
+    background: var(--success-bg);
+    color: var(--success);
+}
+
+.marker-popup .status.offline {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+.marker-popup .latency {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}

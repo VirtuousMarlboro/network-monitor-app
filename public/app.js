@@ -2735,10 +2735,18 @@ function initMap() {
     }).addTo(networkMap);
 
     // Initialize marker cluster group with custom icon
+    // Disabled animations and optimized for better click responsiveness
     markerCluster = L.markerClusterGroup({
         chunkedLoading: true,
         showCoverageOnHover: false,
         maxClusterRadius: 60,
+        animate: false, // Disable cluster animations to prevent flickering
+        animateAddingMarkers: false, // Disable marker add animations
+        removeOutsideVisibleBounds: true, // Remove markers outside view for performance
+        spiderfyOnMaxZoom: true, // Enable spiderfy at max zoom
+        disableClusteringAtZoom: 18, // Disable clustering at high zoom levels
+        zoomToBoundsOnClick: true, // Zoom to show all markers on cluster click
+        singleMarkerMode: false, // Don't show single markers as clusters
         iconCreateFunction: function (cluster) {
             const childMarkers = cluster.getAllChildMarkers();
             const count = childMarkers.length;
@@ -2843,6 +2851,7 @@ function updateMapMarkers(hosts) {
 
     // Track which host IDs we've processed
     const processedIds = new Set();
+    let hasStatusChange = false; // Track if we need to refresh clusters
 
     hosts.forEach(host => {
         if (host.latitude && host.longitude) {
@@ -2859,12 +2868,25 @@ function updateMapMarkers(hosts) {
             `;
 
             if (hostMarkers[host.id]) {
-                // Update existing marker
+                // Update existing marker - only update icon if status changed
                 const marker = hostMarkers[host.id];
-                marker.setIcon(createMarkerIcon(host.status));
-                marker.setLatLng([host.latitude, host.longitude]);
+                const currentStatus = marker.options.hostStatus;
+
+                // Only update icon if status actually changed
+                if (currentStatus !== host.status) {
+                    marker.setIcon(createMarkerIcon(host.status));
+                    marker.options.hostStatus = host.status;
+                    hasStatusChange = true;
+                }
+
+                // Update position only if changed
+                const currentPos = marker.getLatLng();
+                if (currentPos.lat !== host.latitude || currentPos.lng !== host.longitude) {
+                    marker.setLatLng([host.latitude, host.longitude]);
+                }
+
+                // Update popup content
                 marker.setPopupContent(popupContent);
-                marker.options.hostStatus = host.status;
             } else {
                 // Create new marker
                 const marker = L.marker([host.latitude, host.longitude], {
@@ -2892,12 +2914,14 @@ function updateMapMarkers(hosts) {
 
                 hostMarkers[host.id] = marker;
                 markerCluster.addLayer(marker);
+                hasStatusChange = true; // New marker added
             }
         } else {
             // Remove marker if host no longer has location
             if (hostMarkers[host.id]) {
                 markerCluster.removeLayer(hostMarkers[host.id]);
                 delete hostMarkers[host.id];
+                hasStatusChange = true;
             }
         }
     });
@@ -2907,11 +2931,14 @@ function updateMapMarkers(hosts) {
         if (!processedIds.has(hostId)) {
             markerCluster.removeLayer(hostMarkers[hostId]);
             delete hostMarkers[hostId];
+            hasStatusChange = true;
         }
     });
 
-    // Refresh cluster icons to update colors
-    markerCluster.refreshClusters();
+    // Only refresh cluster icons when there's an actual status change
+    if (hasStatusChange) {
+        markerCluster.refreshClusters();
+    }
 }
 
 // ========================================
