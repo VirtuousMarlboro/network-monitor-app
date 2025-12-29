@@ -1393,90 +1393,87 @@ function broadcastSSE(event, data) {
 }
 
 // Process SNMP Traffic Data - Now uses SQLite via databaseService
-// BUG FIX: Added proper counter wraparound, reset detection, and validation
+// BUG FIX: Always store octets, widen time window, prevent gaps
 function processTrafficData(hostId, data) {
     // Get previous entry from database for rate calculation
     const prev = databaseService.getLastTrafficEntry(hostId);
 
     let traffic_in = 0;
     let traffic_out = 0;
+    let skipReason = null;
 
     if (prev) {
         const timeDiff = (data.timestamp - prev.timestamp) / 1000; // seconds
 
-        // Only calculate if time diff is reasonable (between 1 and 60 seconds)
-        // Tighter window to catch anomalies better
-        if (timeDiff >= 1 && timeDiff <= 60) {
+        // Widen time window: 2-120 seconds (polling is 5s, allow for delays)
+        if (timeDiff >= 2 && timeDiff <= 120) {
             let inDiff = data.inOctets - prev.inOctets;
             let outDiff = data.outOctets - prev.outOctets;
 
-            // Detect counter reset or device reboot (counter goes to 0 or much smaller)
-            // If difference is very large negative, it's likely a reset not wraparound
-            const RESET_THRESHOLD = -1000000000; // -1GB indicates likely reset
+            // Detect counter reset (device reboot causes counter to reset to 0)
+            // Small negative values could be 32-bit wraparound, large negative = reset
+            const RESET_THRESHOLD = -100000000; // -100MB indicates likely reset
 
-            if (inDiff < RESET_THRESHOLD || outDiff < RESET_THRESHOLD) {
-                // Counter was reset - skip this sample, return previous values
-                console.log(`[SNMP] Counter reset detected for host ${hostId}, skipping sample`);
-                return null;
+            const isReset = (inDiff < RESET_THRESHOLD || outDiff < RESET_THRESHOLD);
+
+            if (isReset) {
+                // Counter was reset - use 0 for this sample, next sample will be correct
+                skipReason = 'counter_reset';
+                traffic_in = 0;
+                traffic_out = 0;
+            } else {
+                // Handle 32-bit counter wrap-around (at 1Gbps wraps every ~34 seconds)
+                const WRAP_32BIT = 4294967296; // 2^32
+
+                // Apply wraparound for negative values (genuine wrap)
+                if (inDiff < 0) {
+                    inDiff += WRAP_32BIT;
+                }
+                if (outDiff < 0) {
+                    outDiff += WRAP_32BIT;
+                }
+
+                // Calculate Mbps
+                traffic_in = parseFloat(((inDiff * 8) / timeDiff / 1000000).toFixed(4));
+                traffic_out = parseFloat(((outDiff * 8) / timeDiff / 1000000).toFixed(4));
+
+                // VALIDATION: Get host to check interface speed limit
+                const host = monitoredHosts.find(h => h.id === hostId);
+
+                // Default max: 1 Gbps, or interface speed * 1.5 (50% burst headroom)
+                let maxMbps = 1000;
+
+                if (host && host.snmpInterfaceSpeed) {
+                    maxMbps = Math.max(100, (host.snmpInterfaceSpeed / 1000000) * 1.5);
+                }
+
+                // Absolute maximum (100 Gbps)
+                maxMbps = Math.min(maxMbps, 100000);
+
+                // Apply limits - cap anomalous values instead of discarding
+                if (traffic_in < 0) traffic_in = 0;
+                if (traffic_out < 0) traffic_out = 0;
+
+                if (traffic_in > maxMbps) {
+                    traffic_in = maxMbps;
+                }
+                if (traffic_out > maxMbps) {
+                    traffic_out = maxMbps;
+                }
             }
-
-            // Handle 64-bit counter wrap-around (very rare, at 10Gbps takes ~46 years)
-            // Handle 32-bit counter wrap-around (at 100Mbps takes ~5.7 minutes)
-            const WRAP_32BIT = 4294967296;        // 2^32
-            const WRAP_64BIT = Number.MAX_SAFE_INTEGER;
-
-            // Determine wrap value based on counter size
-            const wrapValue = data.is64bit ? WRAP_64BIT : WRAP_32BIT;
-
-            // Only apply wraparound for small negative values (genuine wrap)
-            // Large negative values indicate counter reset (handled above)
-            if (inDiff < 0 && inDiff > RESET_THRESHOLD) {
-                inDiff += wrapValue;
-            }
-            if (outDiff < 0 && outDiff > RESET_THRESHOLD) {
-                outDiff += wrapValue;
-            }
-
-            // Calculate Mbps
-            traffic_in = parseFloat(((inDiff * 8) / timeDiff / 1000000).toFixed(4));
-            traffic_out = parseFloat(((outDiff * 8) / timeDiff / 1000000).toFixed(4));
-
-            // VALIDATION: Get host to check interface speed limit
-            const host = monitoredHosts.find(h => h.id === hostId);
-
-            // Default max: interface speed * 1.2 (allow 20% burst overhead)
-            // If no speed known, cap at 1000 Mbps (1 Gbps) which is reasonable default
-            let maxMbps = 1000; // Default 1 Gbps
-
-            if (host && host.snmpInterfaceSpeed) {
-                // snmpInterfaceSpeed is in bps, convert to Mbps and allow 20% burst
-                maxMbps = Math.max(100, (host.snmpInterfaceSpeed / 1000000) * 1.2);
-            }
-
-            // Absolute maximum sanity cap (even 100G links shouldn't exceed this)
-            const ABSOLUTE_MAX_MBPS = 100000; // 100 Gbps
-            maxMbps = Math.min(maxMbps, ABSOLUTE_MAX_MBPS);
-
-            // Apply limits
-            if (traffic_in < 0) traffic_in = 0;
-            if (traffic_out < 0) traffic_out = 0;
-
-            // If value exceeds interface capacity, it's anomalous data
-            if (traffic_in > maxMbps) {
-                console.log(`[SNMP] Anomalous traffic_in ${traffic_in} Mbps > max ${maxMbps} for host ${hostId}, capping`);
-                traffic_in = maxMbps;
-            }
-            if (traffic_out > maxMbps) {
-                console.log(`[SNMP] Anomalous traffic_out ${traffic_out} Mbps > max ${maxMbps} for host ${hostId}, capping`);
-                traffic_out = maxMbps;
-            }
-        } else if (timeDiff > 60) {
-            // Time gap too large (likely server restart or SNMP timeout)
-            // Skip this sample to avoid averaging errors
-            console.log(`[SNMP] Time gap ${timeDiff}s too large for host ${hostId}, skipping`);
-            return null;
+        } else if (timeDiff > 120) {
+            // Time gap too large - reset baseline, set traffic to 0 for this sample
+            skipReason = 'time_gap';
+            traffic_in = 0;
+            traffic_out = 0;
+        } else if (timeDiff < 2) {
+            // Too fast - use previous traffic values if available
+            skipReason = 'too_fast';
+            traffic_in = prev.traffic_in || 0;
+            traffic_out = prev.traffic_out || 0;
         }
     }
+    // If no prev, traffic_in/out stay at 0 (first sample baseline)
 
     const entry = {
         timestamp: data.timestamp,
@@ -1486,7 +1483,7 @@ function processTrafficData(hostId, data) {
         traffic_out
     };
 
-    // Store in SQLite database
+    // ALWAYS store entry to maintain baseline for next calculation
     databaseService.storeTrafficEntry(hostId, entry);
 
     // Return the entry for immediate use
@@ -1609,17 +1606,17 @@ async function autoPingAllHosts() {
             // Track when host first went down
             hostDownSince[hostData.id] = Date.now();
             hostTicketCreated[hostData.id] = false;
-            console.log(`?? Host ${hostData.name} went down (from ${previousStatus}), waiting 2 minutes before creating ticket...`);
+            console.log(`🔴 Host ${hostData.name} went down (from ${previousStatus}), waiting 2 minutes before creating ticket...`);
 
             // Send Telegram Notification immediately (unless in maintenance)
             const maintenanceDown = isHostInMaintenance(hostData.id);
             if (maintenanceDown) {
                 console.log(`🔧 Host ${hostData.name} is in maintenance - suppressing down notification`);
             } else {
-                await sendTelegramNotification(`?? Host Offline\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nTime: ${new Date(result.timestamp).toLocaleString()}`);
+                await sendTelegramNotification(`🔴 Host Offline\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nTime: ${new Date(result.timestamp).toLocaleString()}`);
                 // Also send push notification with unique tag
                 await sendPushNotificationToAll({
-                    title: '?? Host Offline',
+                    title: '🔴 Host Offline',
                     body: `${hostData.name} (${hostData.host}) is down`,
                     tag: `host-down-${hostData.id}-${Date.now()}`
                 });
@@ -1727,21 +1724,21 @@ async function autoPingAllHosts() {
 
             if (logEntry) {
                 if (previousStatus === 'offline' && !wasTicketCreated) {
-                    console.log(`? Host ${hostData.name} recovered before 2 minutes - no ticket created`);
+                    console.log(`✅ Host ${hostData.name} recovered before 2 minutes - no ticket created`);
                 } else if (previousStatus === 'unknown') {
-                    console.log(`? Host ${hostData.name} is now online (first successful ping)`);
+                    console.log(`🟢 Host ${hostData.name} is now online (first successful ping)`);
                 }
             }
 
             // Send Telegram Notification (unless in maintenance)
             const maintenanceUp = isHostInMaintenance(hostData.id);
             if (maintenanceUp) {
-                console.log(`?? Host ${hostData.name} is in maintenance - suppressing up notification`);
+                console.log(`🔧 Host ${hostData.name} is in maintenance - suppressing up notification`);
             } else {
-                await sendTelegramNotification(`?? Host Online\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nLatency: ${result.time}ms`);
+                await sendTelegramNotification(`🟢 Host Online\n\nHost: ${hostData.name} (CID: ${hostData.cid})\nIP: ${hostData.host}\nLatency: ${result.time}ms`);
                 // Also send push notification with unique tag
                 await sendPushNotificationToAll({
-                    title: '?? Host Online',
+                    title: '🟢 Host Online',
                     body: `${hostData.name} is back online (${result.time}ms)`,
                     tag: `host-up-${hostData.id}-${Date.now()}`
                 });
