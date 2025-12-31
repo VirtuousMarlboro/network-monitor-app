@@ -37,6 +37,14 @@ Aplikasi monitoring jaringan enterprise-grade berbasis web untuk memantau konekt
 - **Rate Limiting** - Proteksi API dari abuse
 - **Health Checks** - `/api/health`, `/api/ready`, `/api/live` endpoints
 
+### 💾 Config Backup
+- **Router Backup** - Backup konfigurasi router otomatis dan manual
+- **Multi-Vendor Support** - MikroTik (SSH) dan FortiGate (SSH/HTTPS API)
+- **Scheduled Backup** - Auto backup harian pada jam 00:00
+- **Encrypted Storage** - Konfigurasi disimpan terenkripsi AES-256
+- **Version History** - Riwayat backup dengan download dan hapus
+- **Visual Indicator** - Badge "Auto Backup" di host card
+
 ### ⚙️ Teknis
 - **PWA Ready** - Installable sebagai aplikasi mobile/desktop
 - **SQLite Database** - Data tersimpan aman (ACID compliant)
@@ -197,6 +205,12 @@ Saat update aplikasi, **JANGAN menimpa folder berikut:**
 | GET | `/api/health` | Health check (detailed) |
 | GET | `/api/ready` | Ready check (load balancer) |
 | GET | `/api/live` | Live check (kubernetes) |
+| POST | `/api/hosts/:id/backup` | Trigger manual backup |
+| GET | `/api/hosts/:id/backup/config` | Get backup config |
+| POST | `/api/hosts/:id/backup/config` | Save backup config |
+| GET | `/api/hosts/:id/backup/history` | Riwayat backup |
+| GET | `/api/backups/download/:id` | Download backup file |
+| DELETE | `/api/backups/delete/:id` | Hapus backup |
 
 ## 🧪 Testing
 
