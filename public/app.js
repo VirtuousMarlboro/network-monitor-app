@@ -1894,10 +1894,13 @@ function renderHosts(hosts) {
                     <span class="host-name">${escapeHtml(host.name)}</span>
                     <span class="host-ip">${escapeHtml(host.host)}</span>
                 </div>
-                <span class="status-badge ${host.status}">
-                    <span class="status-dot"></span>
-                    ${host.status === 'online' ? 'Online' : host.status === 'offline' ? 'Offline' : 'Unknown'}
-                </span>
+                <div class="host-status-badges">
+                    <span class="status-badge ${host.status}">
+                        <span class="status-dot"></span>
+                        ${host.status === 'online' ? 'Online' : host.status === 'offline' ? 'Offline' : 'Unknown'}
+                    </span>
+                    ${host.backupEnabled ? '<span class="backup-badge">Auto Backup</span>' : ''}
+                </div>
             </div>
             ${host.cid ? `<div class="host-cid">CID: ${escapeHtml(host.cid)}</div>` : ''}
             <div class="host-stats">
@@ -1946,10 +1949,15 @@ function renderHosts(hosts) {
                     </svg>
                 </button>
                 ` : ''}
-                <button class="btn btn-ghost btn-icon delete-btn" data-id="${host.id}" title="Hapus">
+                <button class="btn btn-ghost btn-icon backup-btn" data-id="${host.id}" title="Config Backup">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        <!-- Database cylinder -->
+                        <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                        <path d="M21 5v6c0 1.66-4 3-9 3s-9-1.34-9-3V5"/>
+                        <path d="M3 11v6c0 1.66 4 3 9 3s9-1.34 9-3v-6"/>
+                        <!-- Sync arrow -->
+                        <path d="M20 15l2 2-2 2"/>
+                        <path d="M22 17h-5a3 3 0 0 1-3-3"/>
                     </svg>
                 </button>
             </div>
@@ -1975,8 +1983,8 @@ function renderHosts(hosts) {
         });
     });
 
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => window.handleDeleteHost(e.currentTarget.dataset.id));
+    document.querySelectorAll('.backup-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => openBackupModal(e.currentTarget.dataset.id));
     });
 
     document.querySelectorAll('.traffic-btn').forEach(btn => {
@@ -2438,6 +2446,13 @@ function openEditHostModal(hostId) {
                 editSnmpInterface.appendChild(opt);
             }
         }
+    }
+
+    // Show delete button and store hostId for delete handler
+    const deleteHostBtn = document.getElementById('deleteHostBtn');
+    if (deleteHostBtn) {
+        deleteHostBtn.classList.remove('hidden');
+        deleteHostBtn.dataset.hostId = hostId;
     }
 
     showModal(elements.editHostModal);
@@ -6157,10 +6172,19 @@ function initTrafficFilterHandlers() {
 
     if (periodSelect) {
         periodSelect.onchange = () => {
+            // Reset to preset mode - clear custom date range
             currentTrafficPeriod = periodSelect.value;
-            lastTrafficPeriod = periodSelect.value; // Save for navigation
-            currentTrafficFromDate = null;
-            currentTrafficToDate = null;
+            lastTrafficPeriod = periodSelect.value;
+            currentTrafficFromDate = null;  // Clear custom dates
+            currentTrafficToDate = null;    // Clear custom dates
+
+            // Also clear the date input fields
+            const fromInput = document.getElementById('trafficFromDate');
+            const toInput = document.getElementById('trafficToDate');
+            if (fromInput) fromInput.value = '';
+            if (toInput) toInput.value = '';
+
+            console.log(`[Traffic] Period changed to: ${periodSelect.value}, from/to: null/null`);
             loadTrafficData();
         };
     }
@@ -6552,5 +6576,392 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             console.error('Failed to sync Alpine store:', error);
         }
+    }
+});
+
+// ========================================
+// Config Backup Functions
+// ========================================
+
+let currentBackupHostId = null;
+
+// Initialize backup modal event handlers
+function initBackupEventHandlers() {
+    // Close button
+    const closeBtn = document.getElementById('closeBackupModalBtn');
+    if (closeBtn) {
+        closeBtn.onclick = () => {
+            document.getElementById('backupModal').classList.remove('show');
+        };
+    }
+
+    // Save config button
+    const saveBtn = document.getElementById('saveBackupConfigBtn');
+    if (saveBtn) {
+        saveBtn.onclick = saveBackupConfig;
+    }
+
+    // Trigger backup button
+    const triggerBtn = document.getElementById('triggerBackupBtn');
+    if (triggerBtn) {
+        triggerBtn.onclick = triggerManualBackup;
+    }
+
+    // Refresh history button
+    const refreshBtn = document.getElementById('refreshBackupHistoryBtn');
+    if (refreshBtn) {
+        refreshBtn.onclick = loadBackupHistory;
+    }
+
+    // Close on overlay click
+    const modal = document.getElementById('backupModal');
+    if (modal) {
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('show');
+            }
+        };
+    }
+
+    // Delete Host button in edit modal footer
+    const deleteHostBtn = document.getElementById('deleteHostBtn');
+    if (deleteHostBtn) {
+        deleteHostBtn.onclick = () => {
+            const hostId = deleteHostBtn.dataset.hostId;
+            if (hostId && window.handleDeleteHost) {
+                window.handleDeleteHost(hostId);
+            }
+        };
+    }
+
+    // Backup enabled checkbox - update schedule info when toggled
+    const backupEnabledCheckbox = document.getElementById('backupEnabled');
+    if (backupEnabledCheckbox) {
+        backupEnabledCheckbox.addEventListener('change', () => {
+            // Update schedule info display based on checkbox state
+            loadBackupScheduleInfo();
+        });
+    }
+}
+
+// Auto-init when DOM ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBackupEventHandlers);
+} else {
+    initBackupEventHandlers();
+}
+
+async function openBackupModal(hostId) {
+    currentBackupHostId = hostId;
+    const host = cachedHosts.find(h => h.id === hostId);
+    if (!host) return;
+
+    document.getElementById('backupHostName').textContent = host.name;
+
+    // Show modal
+    const modal = document.getElementById('backupModal');
+    if (modal) {
+        modal.classList.add('show');
+    }
+
+    // Load backup config
+    try {
+        const response = await fetch(`${API_BASE}/api/hosts/${hostId}/backup/config`);
+        if (response.ok) {
+            const config = await response.json();
+            document.getElementById('backupEnabled').checked = config.enabled || false;
+            document.getElementById('backupVendor').value = config.vendor || 'mikrotik';
+            document.getElementById('backupMethod').value = config.method || 'ssh';
+
+            // Set port based on method
+            if (config.method === 'https') {
+                document.getElementById('backupPortHttps').value = config.port || 443;
+                document.getElementById('backupPort').value = 22; // Reset SSH port
+            } else {
+                document.getElementById('backupPort').value = config.port || 22;
+                document.getElementById('backupPortHttps').value = 443; // Reset HTTPS port
+            }
+
+            document.getElementById('backupUsername').value = config.username || '';
+            document.getElementById('backupPassword').value = ''; // Never show password
+            document.getElementById('backupApiToken').value = ''; // Never show token
+
+            // Update UI based on vendor and method
+            updateBackupMethodUI();
+        }
+    } catch (err) {
+        console.error('Failed to load backup config:', err);
+    }
+
+    // Load backup history
+    loadBackupHistory();
+
+    // Load auto backup schedule info
+    loadBackupScheduleInfo();
+}
+
+/**
+ * Update backup form UI based on vendor and method selection
+ */
+function updateBackupMethodUI() {
+    const vendor = document.getElementById('backupVendor').value;
+    const method = document.getElementById('backupMethod').value;
+    const methodGroup = document.getElementById('backupMethodGroup');
+    const sshPortGroup = document.getElementById('backupPortGroupSsh');
+    const sshRow = document.getElementById('sshCredentialsRow');
+    const httpsRow = document.getElementById('httpsCredentialsRow');
+
+    // Show method dropdown only for FortiGate
+    if (vendor === 'fortigate') {
+        methodGroup.style.display = 'block';
+    } else {
+        methodGroup.style.display = 'none';
+        document.getElementById('backupMethod').value = 'ssh'; // Reset to SSH for non-FortiGate
+    }
+
+    // Show appropriate credentials based on method
+    const currentMethod = vendor === 'fortigate' ? method : 'ssh';
+
+    if (currentMethod === 'https') {
+        sshPortGroup.style.display = 'none'; // Hide SSH port
+        sshRow.style.display = 'none';
+        httpsRow.style.display = 'block';
+    } else {
+        sshPortGroup.style.display = 'block'; // Show SSH port
+        sshRow.style.display = 'block';
+        httpsRow.style.display = 'none';
+    }
+}
+
+async function loadBackupScheduleInfo() {
+    const scheduleInfoEl = document.getElementById('backupScheduleInfo');
+    const nextTimeEl = document.getElementById('nextBackupTime');
+    const backupEnabledCheckbox = document.getElementById('backupEnabled');
+
+    if (!scheduleInfoEl || !nextTimeEl) return;
+
+    // Check if the host's backup checkbox is enabled
+    const hostBackupEnabled = backupEnabledCheckbox ? backupEnabledCheckbox.checked : false;
+
+    if (!hostBackupEnabled) {
+        scheduleInfoEl.style.display = 'none';
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/api/hosts/schedule`);
+        if (response.ok) {
+            const data = await response.json();
+            // Only show if global backup scheduler is enabled AND host backup is enabled
+            if (data.enabled && data.nextRun && hostBackupEnabled) {
+                const nextDate = new Date(data.nextRun);
+                nextTimeEl.textContent = nextDate.toLocaleString('id-ID', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                scheduleInfoEl.style.display = 'block';
+            } else {
+                scheduleInfoEl.style.display = 'none';
+            }
+        }
+    } catch (err) {
+        console.error('Failed to load backup schedule info:', err);
+        scheduleInfoEl.style.display = 'none';
+    }
+}
+
+async function saveBackupConfig() {
+    if (!currentBackupHostId) return;
+
+    const enabled = document.getElementById('backupEnabled').checked;
+    const vendor = document.getElementById('backupVendor').value;
+    const method = document.getElementById('backupMethod').value;
+    const username = document.getElementById('backupUsername').value;
+    const password = document.getElementById('backupPassword').value;
+    const apiToken = document.getElementById('backupApiToken').value;
+
+    // Build request body based on method
+    const body = { enabled, vendor, method };
+
+    if (vendor === 'fortigate' && method === 'https') {
+        // HTTPS method - send API token and HTTPS port
+        const portHttps = parseInt(document.getElementById('backupPortHttps').value) || 443;
+        body.port = portHttps;
+        body.apiToken = apiToken;
+    } else {
+        // SSH method - send username/password and SSH port
+        const portSsh = parseInt(document.getElementById('backupPort').value) || 22;
+        body.port = portSsh;
+        body.username = username;
+        body.password = password;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/api/hosts/${currentBackupHostId}/backup/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        if (response.ok) {
+            showNotification('Konfigurasi backup tersimpan', 'success');
+            // Refresh schedule info to reflect the new enabled state
+            loadBackupScheduleInfo();
+        } else {
+            const err = await response.json();
+            showNotification(err.error || 'Gagal menyimpan', 'error');
+        }
+    } catch (err) {
+        showNotification('Error: ' + err.message, 'error');
+    }
+}
+
+async function triggerManualBackup() {
+    if (!currentBackupHostId) return;
+
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '⏳ Backup...';
+
+    try {
+        const response = await fetch(`${API_BASE}/api/hosts/${currentBackupHostId}/backup`, {
+            method: 'POST'
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            showNotification(`Backup berhasil: ${result.backup.filename}`, 'success');
+            loadBackupHistory();
+        } else {
+            const err = await response.json();
+            showNotification(err.error || 'Backup gagal', 'error');
+        }
+    } catch (err) {
+        showNotification('Error: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '⚡ Backup Sekarang';
+    }
+}
+
+async function loadBackupHistory() {
+    if (!currentBackupHostId) return;
+
+    const tbody = document.getElementById('backupHistoryTable');
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading...</td></tr>';
+
+    try {
+        const response = await fetch(`${API_BASE}/api/hosts/${currentBackupHostId}/backups`);
+        if (response.ok) {
+            const data = await response.json();
+            const backups = data.backups || [];
+
+            if (backups.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Tidak ada backup</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = backups.map(b => {
+                const date = new Date(b.createdAt).toLocaleString('id-ID', {
+                    timeZone: 'Asia/Jakarta',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                const size = formatBytes(b.sizeBytes);
+                const typeLabel = b.backupType === 'scheduled' ? '🕐 Scheduled' : '👤 Manual';
+                return `
+                    <tr>
+                        <td>${date}</td>
+                        <td>${typeLabel}</td>
+                        <td>${size}</td>
+                        <td>
+                            <button type="button" class="backup-action-btn download" data-backup-id="${b.id}" title="Download">
+                                📥
+                            </button>
+                            <button type="button" class="backup-action-btn delete" data-backup-id="${b.id}" title="Hapus">
+                                🗑️
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Attach event listeners to the buttons
+            tbody.querySelectorAll('.backup-action-btn.download').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const backupId = e.currentTarget.dataset.backupId;
+                    downloadBackup(backupId);
+                });
+            });
+
+            tbody.querySelectorAll('.backup-action-btn.delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const backupId = e.currentTarget.dataset.backupId;
+                    deleteBackup(backupId);
+                });
+            });
+        }
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error loading history</td></tr>';
+    }
+}
+
+function downloadBackup(backupId) {
+    window.open(`${API_BASE}/api/backups/download/${backupId}`, '_blank');
+}
+
+async function deleteBackup(backupId) {
+    if (!confirm('Hapus backup ini?')) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/api/backups/delete/${backupId}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            showNotification('Backup dihapus', 'success');
+            loadBackupHistory();
+        } else {
+            const err = await response.json();
+            showNotification(err.error || 'Gagal menghapus', 'error');
+        }
+    } catch (err) {
+        showNotification('Error: ' + err.message, 'error');
+    }
+}
+
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Export backup functions to global scope
+window.openBackupModal = openBackupModal;
+window.downloadBackup = downloadBackup;
+window.deleteBackup = deleteBackup;
+
+// Add event listeners for backup form when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    // Vendor dropdown change handler
+    const vendorSelect = document.getElementById('backupVendor');
+    if (vendorSelect) {
+        vendorSelect.addEventListener('change', updateBackupMethodUI);
+    }
+
+    // Method dropdown change handler
+    const methodSelect = document.getElementById('backupMethod');
+    if (methodSelect) {
+        methodSelect.addEventListener('change', updateBackupMethodUI);
     }
 });

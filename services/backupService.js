@@ -10,6 +10,9 @@ const BACKUP_PATH = process.env.BACKUP_PATH || './backups';
 const RETENTION_DAYS = parseInt(process.env.BACKUP_RETENTION_DAYS) || 7;
 const DATA_DIR = path.join(__dirname, '../data');
 
+// Track last backup time
+let lastBackupTime = null;
+
 // Ensure backup directory exists
 function ensureBackupDir() {
     if (!fs.existsSync(BACKUP_PATH)) {
@@ -111,6 +114,49 @@ function cleanupOldBackups() {
     }
 }
 
+// Parse cron schedule to calculate next run time (simple parser for common patterns)
+function getNextBackupTime() {
+    if (!BACKUP_ENABLED) {
+        return null;
+    }
+
+    try {
+        // Parse simple cron patterns like "0 0 * * *" (minute hour * * *)
+        const parts = BACKUP_SCHEDULE.split(' ');
+        if (parts.length < 5) return null;
+
+        const minute = parseInt(parts[0]) || 0;
+        const hour = parseInt(parts[1]) || 0;
+
+        const now = new Date();
+        const nextRun = new Date();
+        nextRun.setHours(hour, minute, 0, 0);
+
+        // If the time has already passed today, schedule for tomorrow
+        if (nextRun <= now) {
+            nextRun.setDate(nextRun.getDate() + 1);
+        }
+
+        return nextRun;
+    } catch (err) {
+        console.error('Error calculating next backup time:', err);
+        return null;
+    }
+}
+
+// Get backup schedule info (for API)
+function getBackupScheduleInfo() {
+    const nextRun = getNextBackupTime();
+    return {
+        enabled: BACKUP_ENABLED,
+        schedule: BACKUP_SCHEDULE,
+        nextRun: nextRun ? nextRun.toISOString() : null,
+        lastRun: lastBackupTime ? lastBackupTime.toISOString() : null,
+        retentionDays: RETENTION_DAYS,
+        backupPath: BACKUP_PATH
+    };
+}
+
 // Initialize Service
 function init() {
     if (!BACKUP_ENABLED) {
@@ -127,12 +173,21 @@ function init() {
         return;
     }
 
+    // Log next backup time
+    const nextRun = getNextBackupTime();
+    if (nextRun) {
+        console.log(`⏰ Next backup scheduled at: ${nextRun.toLocaleString()}`);
+    }
+
     cron.schedule(BACKUP_SCHEDULE, () => {
+        lastBackupTime = new Date();
         performBackup();
     });
 }
 
 module.exports = {
     init,
-    performBackup // Exported for manual trigger testing
+    performBackup, // Exported for manual trigger testing
+    getNextBackupTime,
+    getBackupScheduleInfo
 };

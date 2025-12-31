@@ -1192,9 +1192,19 @@
                 </div>
 
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-ghost" id="cancelEditHostModalBtn">Batal</button>
-                <button class="btn btn-primary" id="saveEditHostBtn">Simpan Perubahan</button>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button class="btn btn-danger hidden" id="deleteHostBtn" title="Hapus Host">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                    Hapus Host
+                </button>
+                <div class="modal-footer-right">
+                    <button class="btn btn-ghost" id="cancelEditHostModalBtn">Batal</button>
+                    <button class="btn btn-primary" id="saveEditHostBtn">Simpan Perubahan</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1473,7 +1483,8 @@
                     <div class="traffic-nav-group">
                         <button class="btn btn-ghost btn-sm" id="trafficPrevBtn" title="Previous Period">◀</button>
                         <button class="btn btn-ghost btn-sm" id="trafficNextBtn" title="Next Period">▶</button>
-                        <button class="btn btn-outline btn-sm" id="trafficClearBtn" title="Reset ke Last Hour">Clear</button>
+                        <button class="btn btn-outline btn-sm" id="trafficClearBtn"
+                            title="Reset ke Last Hour">Clear</button>
                         <button class="btn btn-primary btn-sm" id="trafficApplyBtn">Apply</button>
                     </div>
                 </div>
@@ -1527,6 +1538,133 @@
         </div>
     </div>
 
+    <!-- Config Backup Modal -->
+    <div class="modal-overlay" id="backupModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>📦 Config Backup - <span id="backupHostName"></span></h3>
+                <button class="modal-close" id="closeBackupModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Backup Configuration -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4>⚙️ Konfigurasi Backup</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="backupEnabled">
+                                <span>Enable Scheduled Backup</span>
+                            </label>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="backupVendor">Vendor</label>
+                                <select id="backupVendor" class="form-control">
+                                    <option value="mikrotik">MikroTik</option>
+                                    <option value="fortigate">FortiGate</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="backupMethodGroup" style="display: none;">
+                                <label for="backupMethod">Metode</label>
+                                <select id="backupMethod" class="form-control">
+                                    <option value="ssh">SSH</option>
+                                    <option value="https">HTTPS (API)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="backupPortGroupSsh">
+                                <label for="backupPort">SSH Port</label>
+                                <input type="number" id="backupPort" class="form-control" value="22" min="1"
+                                    max="65535">
+                            </div>
+                        </div>
+                        <!-- SSH Credentials -->
+                        <div id="sshCredentialsRow">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="backupUsername">Username</label>
+                                    <input type="text" id="backupUsername" class="form-control" placeholder="admin">
+                                </div>
+                                <div class="form-group">
+                                    <label for="backupPassword">Password <small
+                                            style="color: var(--text-muted); font-weight: normal;">(kosongkan jika tidak
+                                            diubah)</small></label>
+                                    <input type="password" id="backupPassword" class="form-control"
+                                        placeholder="Kosongkan jika tidak diubah">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- HTTPS API Token -->
+                        <div id="httpsCredentialsRow" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group" style="flex: 0 0 120px;">
+                                    <label for="backupPortHttps">HTTPS Port</label>
+                                    <input type="number" id="backupPortHttps" class="form-control" value="443" min="1"
+                                        max="65535">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="backupApiToken">API Token <small
+                                            style="color: var(--text-muted); font-weight: normal;">(kosongkan jika tidak
+                                            diubah)</small></label>
+                                    <input type="password" id="backupApiToken" class="form-control"
+                                        placeholder="FortiGate REST API Token">
+                                </div>
+                            </div>
+                            <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+                                💡 Buat API token di FortiGate: System → Administrators → REST API Admin
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" id="saveBackupConfigBtn">
+                                💾 Simpan Konfigurasi
+                            </button>
+                            <button class="btn btn-success" id="triggerBackupBtn">
+                                ⚡ Backup Sekarang
+                            </button>
+                        </div>
+
+                        <!-- Auto Backup Schedule Info -->
+                        <div class="backup-schedule-info" id="backupScheduleInfo"
+                            style="margin-top: 16px; padding: 12px; background: var(--bg-tertiary); border-radius: var(--radius-sm); display: none;">
+                            <div
+                                style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 0.9rem;">
+                                <span>⏰</span>
+                                <span>Auto backup berikutnya: <strong id="nextBackupTime"
+                                        style="color: var(--accent-secondary);">-</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Backup History -->
+                <div class="card">
+                    <div class="card-header">
+                        <h4>📋 Riwayat Backup</h4>
+                        <button class="btn btn-sm btn-ghost" id="refreshBackupHistoryBtn">🔄 Refresh</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 35%;">Waktu</th>
+                                    <th style="width: 25%;">Tipe</th>
+                                    <th style="width: 20%;">Ukuran</th>
+                                    <th style="width: 20%;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="backupHistoryTable">
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Tidak ada backup</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Chart.js (local for reliability) -->
     <script src="chart.min.js"></script>
     <!-- Leaflet JS -->
@@ -1535,7 +1673,7 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <!-- Floating Windows Manager -->
     <script src="js/floating-windows.js"></script>
-    <script src="app.js?v=2.8"></script>
+    <script src="app.js?v=3.0"></script>
 </body>
 
 </html>

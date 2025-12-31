@@ -88,6 +88,11 @@ document.addEventListener('alpine:init', () => {
                 window.openTracerouteModal(this.host.host);
             }
         },
+        openBackup() {
+            if (typeof window.openBackupModal === 'function') {
+                window.openBackupModal(this.host.id);
+            }
+        },
 
         // Update host data (called from store updates)
         updateHost(newData) {

@@ -30,6 +30,8 @@ const { createHostRoutes } = require('./routes/hostRoutes');
 const { createTicketRoutes } = require('./routes/ticketRoutes');
 const { createSnmpRoutes } = require('./routes/snmpRoutes');
 const { createSettingsRoutes } = require('./routes/settingsRoutes');
+const { createBackupRoutes } = require('./routes/backupRoutes');
+const configBackupService = require('./services/configBackupService');
 
 // SECURITY: Persistent session store with SQLite
 const Database = require('better-sqlite3');
@@ -422,11 +424,24 @@ let dataSource = 'sqlite';
 
 function loadData() {
     try {
-        // Load hosts
-        if (fs.existsSync(HOSTS_FILE)) {
+        // Load hosts - Prefer database, fallback to JSON
+        const dbHosts = databaseService.getAllHosts();
+        if (dbHosts && dbHosts.length > 0) {
+            monitoredHosts = dbHosts;
+            console.log(`📂 Loaded ${monitoredHosts.length} hosts from database`);
+        } else if (fs.existsSync(HOSTS_FILE)) {
+            // Fallback to JSON file if database is empty (first-time migration)
             const hostsData = fs.readFileSync(HOSTS_FILE, 'utf-8');
             monitoredHosts = JSON.parse(hostsData);
-            console.log(`📂 Loaded ${monitoredHosts.length} hosts from file`);
+            console.log(`📂 Loaded ${monitoredHosts.length} hosts from JSON file (will migrate to DB)`);
+            // Migrate to database
+            for (const host of monitoredHosts) {
+                const existing = databaseService.getHostById(host.id);
+                if (!existing) {
+                    databaseService.createHost(host);
+                }
+            }
+            console.log('✅ Hosts migrated to database');
         }
 
         // Load logs
@@ -1056,6 +1071,16 @@ const settingsRoutes = createSettingsRoutes({
 });
 app.use('/api/settings', settingsRoutes);  // /api/settings, /api/settings/test-telegram
 app.use('/api', settingsRoutes);  // /api/waf/stats (nested in settingsRoutes)
+
+// Config Backup Routes
+const backupRoutes = createBackupRoutes({
+    getHosts: () => monitoredHosts,
+    databaseService,
+    configBackupService,
+    middleware: authMiddleware
+});
+app.use('/api/hosts', backupRoutes);  // /api/hosts/:id/backup, /api/hosts/:id/backups
+app.use('/api/backups', backupRoutes);  // /api/backups/:id/download, /api/backups/:id/delete
 
 // Single ping attempt (internal function)
 async function singlePing(host) {
@@ -3424,5 +3449,38 @@ app.listen(PORT, () => {
         databaseService.cleanupOldPingHistory(3); // Keep 3 days
     }, 24 * 60 * 60 * 1000); // Every 24 hours
 
+    // Weekly Config Backup (Sunday at midnight - check every hour)
+    setInterval(async () => {
+        const now = new Date();
+        // Run on Sunday (0) at midnight (0:00)
+        if (now.getDay() === 0 && now.getHours() === 0) {
+            console.log('[Scheduled Backup] Starting weekly config backups...');
+            for (const host of monitoredHosts) {
+                if (host.backupEnabled && host.backupCredentials) {
+                    try {
+                        const creds = configBackupService.decryptCredentials(host.backupCredentials);
+                        const configContent = await configBackupService.backupViaSsh({
+                            host: host.host,
+                            port: creds.port || 22,
+                            username: creds.username,
+                            password: creds.password,
+                            vendor: host.backupVendor,
+                            timeout: 60000
+                        });
+                        const { filename, sizeBytes } = configBackupService.saveEncryptedConfig(
+                            host.id, configContent, 'scheduled'
+                        );
+                        databaseService.storeConfigBackup(host.id, filename, host.backupVendor, sizeBytes, 'scheduled');
+                        console.log(`[Scheduled Backup] ✅ ${host.name}: ${filename}`);
+                    } catch (err) {
+                        console.error(`[Scheduled Backup] ❌ ${host.name}: ${err.message}`);
+                    }
+                }
+            }
+            console.log('[Scheduled Backup] Weekly backup completed');
+        }
+    }, 60 * 60 * 1000); // Check every hour
+
     console.log('✅ Health check endpoints: /api/health, /api/ready, /api/live');
+    console.log('📦 Config backup: Manual + Weekly scheduled (Sunday midnight)');
 });

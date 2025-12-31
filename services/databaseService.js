@@ -268,6 +268,42 @@ function initializeSchema() {
         ON ping_history(host_id, timestamp DESC);
     `);
 
+    // Config Backups Table - For router config backup history
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS config_backups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            host_id TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            vendor TEXT,
+            size_bytes INTEGER,
+            backup_type TEXT DEFAULT 'manual',
+            created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+            FOREIGN KEY (host_id) REFERENCES hosts(id)
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_backup_host 
+        ON config_backups(host_id, created_at DESC);
+    `);
+
+    // Schema Migrations - Add backup columns to hosts table
+    const hostsColumns = db.prepare("PRAGMA table_info(hosts)").all();
+    const hasBackupEnabled = hostsColumns.some(c => c.name === 'backup_enabled');
+    if (!hasBackupEnabled) {
+        console.log('📦 Adding backup columns to hosts table...');
+        db.exec(`ALTER TABLE hosts ADD COLUMN backup_enabled INTEGER DEFAULT 0`);
+        db.exec(`ALTER TABLE hosts ADD COLUMN backup_vendor TEXT`);
+        db.exec(`ALTER TABLE hosts ADD COLUMN backup_credentials TEXT`);
+        console.log('✅ Backup columns added');
+    }
+
+    // Add backup_method column if not exists
+    const hasBackupMethod = hostsColumns.some(c => c.name === 'backup_method');
+    if (!hasBackupMethod) {
+        console.log('📦 Adding backup_method column to hosts table...');
+        db.exec(`ALTER TABLE hosts ADD COLUMN backup_method TEXT DEFAULT 'ssh'`);
+        console.log('✅ Backup method column added');
+    }
+
     console.log('✅ Database schema initialized');
 }
 
@@ -501,7 +537,12 @@ function getAllHosts() {
         snmpInterfaceName: h.snmp_interface_name,
         groupId: h.group_id,
         lastCheck: h.last_check,
-        createdAt: h.created_at
+        createdAt: h.created_at,
+        // Backup fields
+        backupEnabled: !!h.backup_enabled,
+        backupVendor: h.backup_vendor,
+        backupMethod: h.backup_method || 'ssh',
+        backupCredentials: h.backup_credentials
     }));
 }
 
@@ -517,7 +558,12 @@ function getHostById(id) {
         snmpInterfaceName: h.snmp_interface_name,
         groupId: h.group_id,
         lastCheck: h.last_check,
-        createdAt: h.created_at
+        createdAt: h.created_at,
+        // Backup fields
+        backupEnabled: !!h.backup_enabled,
+        backupVendor: h.backup_vendor,
+        backupMethod: h.backup_method || 'ssh',
+        backupCredentials: h.backup_credentials
     };
 }
 
@@ -554,6 +600,11 @@ function updateHost(id, data) {
     if (data.snmpInterface !== undefined) { fields.push('snmp_interface = ?'); values.push(data.snmpInterface); }
     if (data.snmpInterfaceName !== undefined) { fields.push('snmp_interface_name = ?'); values.push(data.snmpInterfaceName); }
     if (data.lastCheck !== undefined) { fields.push('last_check = ?'); values.push(data.lastCheck); }
+    // Backup fields
+    if (data.backupEnabled !== undefined) { fields.push('backup_enabled = ?'); values.push(data.backupEnabled); }
+    if (data.backupVendor !== undefined) { fields.push('backup_vendor = ?'); values.push(data.backupVendor); }
+    if (data.backupMethod !== undefined) { fields.push('backup_method = ?'); values.push(data.backupMethod); }
+    if (data.backupCredentials !== undefined) { fields.push('backup_credentials = ?'); values.push(data.backupCredentials); }
 
     if (fields.length === 0) return;
 
@@ -1084,7 +1135,72 @@ module.exports = {
     getPingHistory,
     loadAllPingHistory,
     cleanupOldPingHistory,
+    // Config Backups
+    storeConfigBackup,
+    getConfigBackups,
+    getConfigBackupById,
+    deleteConfigBackup,
     // Migration
     migrateFromJson,
     migrateAllFromJson,
 };
+
+// ========================================
+// Config Backup Operations
+// ========================================
+
+const backupInsertStmt = db.prepare(`
+    INSERT INTO config_backups (host_id, filename, vendor, size_bytes, backup_type)
+    VALUES (?, ?, ?, ?, ?)
+`);
+
+const backupSelectStmt = db.prepare(`
+    SELECT * FROM config_backups WHERE host_id = ? ORDER BY created_at DESC LIMIT ?
+`);
+
+const backupByIdStmt = db.prepare(`
+    SELECT * FROM config_backups WHERE id = ?
+`);
+
+const backupDeleteStmt = db.prepare(`
+    DELETE FROM config_backups WHERE id = ?
+`);
+
+function storeConfigBackup(hostId, filename, vendor, sizeBytes, backupType = 'manual') {
+    try {
+        const result = backupInsertStmt.run(hostId, filename, vendor, sizeBytes, backupType);
+        return { id: result.lastInsertRowid };
+    } catch (err) {
+        console.error('Error storing config backup:', err.message);
+        return null;
+    }
+}
+
+function getConfigBackups(hostId, limit = 50) {
+    try {
+        return backupSelectStmt.all(hostId, limit);
+    } catch (err) {
+        console.error('Error getting config backups:', err.message);
+        return [];
+    }
+}
+
+function getConfigBackupById(backupId) {
+    try {
+        return backupByIdStmt.get(backupId);
+    } catch (err) {
+        console.error('Error getting config backup:', err.message);
+        return null;
+    }
+}
+
+function deleteConfigBackup(backupId) {
+    try {
+        backupDeleteStmt.run(backupId);
+        return true;
+    } catch (err) {
+        console.error('Error deleting config backup:', err.message);
+        return false;
+    }
+}
+
